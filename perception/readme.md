@@ -722,12 +722,12 @@ detection_bbox → /camera_head/detection_bbox/bboxes_3d
                         ↓
               grasp_gate (launch_gate:=true)
                         ↓
-         /object_pose (world) + /hand_gesture_cmd_exec
+   /{side}_hand/object_pose (world) + /{side}_hand/gesture_cmd_exec
                         ↓
               hand_gesture_node (gesture_node)
 ```
 
-`grasp_gate` 从 `bboxes_3d` 读取选中物体的 `center`，发布 `/object_pose`（`frame_id=world`），并转发门控后的手势指令。无需额外桥接节点。
+`grasp_gate` 从 `bboxes_3d` 读取选中物体的 `center`，发布 `/{side}_hand/object_pose`（`frame_id=world`），并转发门控后的手势指令。无需额外桥接节点。感知话题（`bboxes_3d` 等）左右手共享，手势侧话题按 `hand_side` 自动区分。
 
 **无门控链路：** 仅订阅 `bboxes_3d`，靠 `object_size` / `grasp_type` 做自适应闭合；不依赖 `/object_pose`。
 

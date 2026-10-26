@@ -1,53 +1,66 @@
 # 手势原语库
 
-本文档介绍 **35 个**预定义手势原语的分类、行为、参数与使用方式。注册表见 `primitives/__init__.py` 中 `PRIMITIVE_REGISTRY`。
+本文档介绍预定义手势原语的分类、行为、参数与使用方式。启动时会递归扫描
+`primitives/` 下任意公共包层级中定义的具体 `HandGesturePrimitive` 子类并构建
+`PRIMITIVE_REGISTRY`。任意层级以 `_` 开头的私有包或模块不会被导入。
+手型 allowlist / 能力见 `config/{o20,o6,l6,l25}.yaml`；ROS 接口见 [`interfaces.md`](interfaces.md)。
+
+> **量纲**：有 `robot_description` 时，执行核内部为 **semantic_rad**（O20 槽 + rad）；
+> YAML / 代码中的 0～255 为标定源或硬件边界，经 Converter / ``AngleUnits`` 换算。
+> 详见 [`units_radians_migration.md`](units_radians_migration.md)。
+> 下文关节表中的 0～255 描述的是 **legacy 标定语义**，不是执行核运行时量纲。
+
+---
+
+## 手型与力反馈
+
+力控类原语统一：**触觉优先**，其次按手型使用电流或力矩；无反馈时依赖位置到达 / 闭合上限。
+
+| 手型 | 反馈通道 | 能力 token | YAML 接触量纲 |
+|------|----------|------------|---------------|
+| O20 / L25 | 关节电流 (mA) | `current` | `contact_delta` / `hold_safe_current` |
+| O6 | 关节力矩 (0~100%) | `motor_torque` | `contact_delta_torque_pct` / `hold_safe_torque_pct` |
+| L6 | 触觉（电流占位不可用） | `touch`（`current=false`） | 配置可保留电流键，运行时以触觉停指 |
+
+`primitive_catalog` 中 `current` ↔ `motor_torque` ↔ `touch` 可互为力控能力替代，避免 L6 因缺电流被误拒。
+
+O6/L6 无独立 tip/rot（索引 `-1`）。legacy 闭合路径须用 `set_joint` / `tip_or_base` / `present_joints`（`primitive_base.py`），禁止直接下标写入。
 
 ---
 
 ## 原语总览
 
-| # | 指令名 | 类别 | 参与手指 | 感知输入 | 力控 | 分阶段 | 支持手型 |
-|---|--------|------|---------|---------|------|--------|----------|
-| 1 | `init` | 安全 | 全部 | — | — | — | O20 / O6 / L25 / L20 |
-| 2 | `open` | 安全 | 全部 | — | — | — | O20 / O6 / L25 / L20 |
-| 3 | `release` | 安全 | 全部 | — | — | — | O20 / O6 / L25 / L20 |
-| 4 | `relax_grip` | 安全 | 全部 | — | — | — | O20 / O6 / L25 / L20 |
-| 5 | `fist` | 固定 | 全部 | — | — | 内部 P1–P4 | O20 / O6 / L25 / L20 |
-| 6 | `pinch` | 固定 | 拇+食 | — | 触觉/堵转停指 | — | O20 / O6 / L25 / L20 |
-| 7 | `point` | 固定 | 全部 | — | — | — | O20 / O6 / L25 / L20 |
-| 8 | `ok_sign` | 固定 | 全部 | — | — | — | O20 / O6 / L25 / L20 |
-| 9 | `v_sign` | 固定 | 全部 | — | — | — | O20 / O6 / L25 / L20 |
-| 10 | `thumb_adduction_grip` | 侧向夹持 | 拇+(食中无小) | object_size（可选） | 触觉/电流/力矩 | prep/close | O20 / O6 / L25 / L20 |
-| 11 | `index_middle_adduction_grip` | 侧向夹持 | 食+中 | object_size（可选） | 触觉/电流 | prep/close | O20 / L25 / L20 |
-| 12 | `tripod` | 非视觉捏取 | 拇+食+中 | — | — | — | O20 / O6△ / L25 / L20 |
-| 13 | `ring` | 非视觉力控 | 拇+食+中 | object_pose（可选） | 电流/力矩 | 内部分阶段 | O20 / O6 / L25 / L20 |
-| 14 | `middle_ring` | 非视觉力控 | 拇+中 | object_pose（可选） | 电流/力矩 | 内部分阶段 | O20 / O6 / L25 / L20 |
-| 15 | `index_pinch` | 非视觉捏取 | 拇+食 | — | 触觉/堵转停指 | — | O20 / O6△ / L25 / L20 |
-| 16 | `middle_pinch` | 非视觉捏取 | 拇+中 | — | 触觉/堵转停指 | — | O20 / O6△ / L25 / L20 |
-| 17 | `parallel_extension` | 非视觉固定夹持 | 拇 vs 食+中+无+小 | — | — | — | O20 / L25 / L20 |
-| 18 | `index_ring_by_vision` | 感知自适应 | 拇+食 | object_size | 触觉/电流 | — | O20 / O6△ / L25 / L20 |
-| 19 | `large_wrap_by_vision` | 感知自适应 | 全部 | object_size | 触觉/电流 | 内部分阶段 | O20 / O6△ / L25 / L20 |
-| 20 | `middle_ring_by_vision` | 视觉力控包络 | 拇+中 | object_size | 电流/力矩 | 内部分阶段 | O20 / O6△ / L25 / L20 |
-| 21 | `ring_by_vision` | 视觉力控包络 | 拇+食+中 | object_size | 电流/力矩 | 内部分阶段 | O20 / O6△ / L25 / L20 |
-| 22 | `small_warp_by_vision` | 视觉力控包络 | 拇+食+中+无+小 | object_size | 电流/力矩 | 内部分阶段 | O20 / O6△ / L25 / L20 |
-| 23 | `no_index_warp_by_vision` | 视觉力控包络 | 拇+中+无+小 | object_size | 电流/力矩 | 内部分阶段 | O20 / O6△ / L25 / L20 |
-| 24 | `hook_by_vision` | 视觉力控包络 | 食+中+无+小 | object_size | 电流/力矩 | 内部分阶段 | O20 / O6△ / L25 / L20 |
-| 25 | `tripod_by_vision` | 视觉力控包络 | 拇+食+中 | object_size | 电流/力矩 | 内部分阶段 | O20 / O6△ / L25 / L20 |
-| 26 | `palmar_by_vision` | 视觉力控包络 | 全部（掌心支撑） | object_size | 电流/力矩 | 内部分阶段 | O20 / O6△ / L25 / L20 |
-| 27 | `index_pinch_by_vision` | 视觉定位捏取 | 拇+食 | tcp_pose / object_pose | — | — | O20 / O6△ / L25 / L20 |
-| 28 | `middle_pinch_by_vision` | 视觉定位捏取 | 拇+中（食避让） | tcp_pose / object_pose | — | — | O20 / O6△ / L25 / L20 |
-| 29 | `parallel_extension_by_vision` | 视觉定位包络 | 拇 vs 食+中+无+小 | tcp_pose / object_pose | — | — | O20 / O6△ / L25 / L20 |
-| 30 | `disk_by_vision` | 视觉定位包络 | 全部 C 形 | tcp_pose / object_pose | — | 内部 P1–P3 | O20 / O6△ / L25 / L20 |
-| 31 | `index_flick` | 动态拨动 | 食 | — | — | 内部循环 | L25 / L20 |
-| 32 | `index_middle_flick` | 动态拨动 | 食+中 | — | — | 内部循环 | L25 / L20 |
-| 33 | `twist2digit` | 动态扭动 | 拇+食 | — | 电流 | 内部循环 | L25 / L20 |
-| 34 | `twist3digit` | 动态扭动 | 拇+食+中 | — | 电流 | 内部循环 | L25 / L20 |
-| 35 | `twist5digit` | 动态扭动 | 全部 | — | 电流 | 内部循环 | L25 / L20 |
+| # | 指令名 | 类别 | 参与手指 | 感知输入 | 力控 | 分阶段 |
+|---|--------|------|---------|---------|------|--------|
+| 1 | `init` | 安全 | 全部 | — | — | — |
+| 2 | `open` | 安全 | 全部 | — | — | — |
+| 3 | `release` | 安全 | 全部 | — | — | — |
+| 4 | `relax_grip` | 安全 | 全部 | — | — | — |
+| 5 | `fist` | 固定 | 全部 | — | — | — |
+| 6 | `pinch` | 固定 | 拇+食 | — | — | — |
+| 7 | `point` | 固定 | 全部 | — | — | — |
+| 8 | `ok_sign` | 固定 | 全部 | — | — | — |
+| 9 | `v_sign` | 固定 | 全部 | — | — | — |
+| 10 | `index_ring` | 自适应 | 拇+食 | object_size | 触觉/电流·力矩 | — |
+| 11 | `large_wrap` | O6/L6 固定包络 | 全部 | — | — | prep/close/auto |
+| 12 | `thumb_adduction_grip` | 侧向夹持 | 拇+(食中无小) | object_size | 触觉/电流·力矩 | prep/close |
+| 13 | `index_middle_adduction_grip` | 侧向夹持 | 拇+食+中 | object_size | 触觉/电流·力矩 | prep/close |
+| 14 | `middle_ring` | 力控包络 | 拇+中 | object_size | 触觉/电流·力矩 | — |
+| 15 | `ring` | 力控包络 | 拇+食+中 | object_size | 触觉/电流·力矩 | — |
+| 16 | `small_warp` | 力控包络 | 拇+食+中+无+小 | object_size | 触觉/电流·力矩 | — |
+| 17 | `no_index_warp` | 力控包络 | 拇+中+无+小 | object_size | 触觉/电流·力矩 | — |
+| 18 | `hook` | 力控包络 | 食+中+无+小 | object_size | 触觉/电流·力矩 | — |
+| 19 | `tripod` | 固定 / 两阶段 | 拇+食+中 | — | — | auto（默认）/prep/close/full |
+| 20 | `palmar` | 力控包络 | 全部（掌心支撑） | object_size | 触觉/电流·力矩 | — |
+| 21 | `index_pinch` | 定位捏取 | 拇+食 | tcp_pose / object_pose | — | — |
+| 22 | `middle_pinch` | 定位捏取 | 拇+中（食避让） | tcp_pose / object_pose | — | — |
+| 23 | `parallel_extension` | 定位包络 | 拇 vs 食+中+无+小 | tcp_pose / object_pose | — | — |
+| 24 | `disk` | 定位包络 | 全部 C 形 | tcp_pose / object_pose | — | 内部 P1–P3 |
+| 25 | `hammer_grip` | O6 固定握持 | 全部 | — | 逐关节限速 | prep/close |
+| 26 | `tripod_by_force` | 三指接触停指捏取 | 拇+食+中 | 电流/触觉（按手型） | 逐指冻结 | auto（默认）/prep/close/full |
 
-> **GraspGate 门控（11 个）**：`ring_by_vision` `small_warp_by_vision` `no_index_warp_by_vision` `middle_ring_by_vision` `hook_by_vision` `tripod_by_vision` `palmar_by_vision` `parallel_extension_by_vision` `index_pinch_by_vision` `middle_pinch_by_vision` `disk_by_vision` — 须经 H/XY/Fwd 三判定后才转发至 Executor。  
+> **GraspGate 门控（11 个）**：`ring_by_vision` `small_warp_by_vision` `no_index_warp_by_vision` `middle_ring_by_vision` `hook_by_vision` `tripod_by_vision` `palmar_by_vision` `parallel_extension_by_vision` `index_pinch_by_vision` `middle_pinch_by_vision` `disk_by_vision` — 须经 H/XY/Fwd 三判定后才转发至 Executor。
 > **Executor 可达性**：除 4 个安全原语外，所有原语激活时检查 TCP–物体距离（默认 15 cm）；定位类原语在运行中还会根据 `object_pose` 做掌心前方 2–15 cm 保持判定。
->
-> **手型统计**：O6 支持 28 个、O20 支持 30 个、L25 支持 35 个；L20 是 L25 的兼容别名，同样支持 35 个。`△` 表示 O6 白名单允许并可继续执行，但会因缺少独立指尖/侧摆/FK 等能力记录 `capability_warning`，以 MCP 近似姿态运行。
 
 ---
 
@@ -64,7 +77,7 @@
 | `release` | 从当前位置相对张开 | 0.6s |
 | `relax_grip` | 先放松再回中（重置抓取状态） | 0.6s |
 
-### 固定类（5 个）
+### 固定类（6 个）
 
 预设目标角度 + 平滑插值（lerp），不依赖感知输入，不经 GraspGate。
 
@@ -75,26 +88,96 @@
 | `point` | 食指伸出，其余握拢 | 单阶段 lerp |
 | `ok_sign` | 拇食成圆，其余伸直 | 单阶段 lerp |
 | `v_sign` | 食中伸开，其余握拢 | 单阶段 lerp |
+| `tripod` | 拇指与食指、中指形成三角支撑 | 全手型 `prep`/`close`；`auto`/`full` 见下 |
+
+#### tripod 两阶段
+
+所有手型都支持 `tripod prep` / `tripod close`（时长见各手 `gestures.tripod.stages` /
+`tripod_two_stage`）。
+
+- **auto**（**默认**，裸发 `tripod` / `tripod auto` / `tripod full` 同效）：自动串联
+  prep → 停顿 → close。L6 为两阶段（停顿见 `pause_duration`，默认 1s）。
+  O20/L25/G20/O6 的 `tripod` 仍走既有一次到位引擎；`tripod_by_force` 的 auto
+  亦拆成 prep→close。
+- **prep**：侧摆/旋转等到 tripod 瞄准位，拇/食/中屈曲保持 `init` 预成型，不捏合；
+  到位后 `grasp_state=ready`，**等待** `tripod close`。
+- **close**：只闭合拇/食/中屈曲，其余关节保持当前值。
+
+L6 prep 额外把拇指屈曲强制完全张开、四指进 init，适配欠驱动行程。
+
+#### O6/L6 large_wrap 两阶段
+
+- `large_wrap prep`：用 0.5s 进入准备位；拇指完全张开（屈曲 255）且侧摆为 0，
+  食指、中指、无名指和小指沿用 `init` 姿态。
+- `large_wrap close`：从当前姿态用 0.5s 闭合四指，拇指延迟 0.2s 后开始闭合；
+  五个屈曲关节的硬件目标均为 `0`（完全弯曲），拇指侧摆保持当前值。
+- `large_wrap auto`（以及兼容的无参数 `large_wrap`）：先完成 prep，保持准备位
+  1.0s，再自动执行 close。
+
+#### tripod_by_force
+
+动作时序复用同手型 `tripod`：**默认 auto**（裸发同效）；仅 `prep` 等待 close。
+O20/L25/G20/O6 的 `tripod_by_force auto` 走 prep→close，力控只在 close 采集基线并逐指冻结。
+
+接触策略在 `tripod_force.py`，由各手 `gestures.tripod_by_force.contact` 配置：
+
+| 手型 | `feedback_source` | 默认阈值 | 无反馈时 |
+|------|-------------------|----------|----------|
+| L6 | `motor_current` | CAN `0x36` 增量 30 | 等待，不降级定时闭合 |
+| O20 / L25 / G20 | `auto`（触觉优先，否则电流 Δ mA） | `contact_thresholds.current_delta` | 继续位置闭合，有反馈再冻 |
+| O6 | `tactile` | 压感阈值 | 无压感则不冻（不用空载力矩） |
+
+新手型：allowlist 加入 `tripod_by_force`，并按上表补 `contact` 段即可，不必改原语。
+
+```yaml
+tripod_by_force:
+  contact:
+    fingers: [thumb, index, middle]
+    feedback_source: auto          # auto | motor_current | current | torque | tactile
+    feedback_delta: 270            # 省略则用手型默认
+    require_feedback: false
+```
+
+### O6 两阶段握锤
+
+`hammer_grip` 仅加入 O6 allowlist，使用 O6 原生 6 关节硬件空间参数。
+`prep` 使用 O6 默认速度 200 到初始化位姿；`close` 会先确认初始化位姿，
+未到位时自动补完 prep，连续 3 帧到位后从实际反馈位置开始闭合，并使用
+下列逐关节速度。等待 2 秒仍未到位时保持初始化位姿，不强行闭合。速度值
+由 10 Hz Executor 解释为每个关节每秒最多变化的 0–255 位置单位。
+
+```yaml
+initial: [100.0, 50.0, 50.0, 50.0, 50.0, 50.0]
+target:  [23.53, 96.08, 9.80, 11.76, 15.69, 11.76]
+speeds:  [50, 50, 50, 100, 100, 50]
+```
+
+```bash
+# 分阶段命令
+ros2 topic pub --once /left_hand/gesture_cmd std_msgs/String \
+  "data: 'hammer_grip prep'"
+ros2 topic pub --once /left_hand/gesture_cmd std_msgs/String \
+  "data: 'hammer_grip close'"
+```
 
 ### 感知自适应类（2 个）
 
-根据 `PrimitiveContext.object_size` 实时调整闭合量，支持触觉或**关节电流**闭环（无触觉传感器时自动 fallback）。
+根据 `PrimitiveContext.object_size` 实时调整闭合量，支持触觉或**关节电流/力矩**闭环（按手型；无传感器时自动 fallback）。
 
 | 指令 | 手形 | 自适应逻辑 | 闭环策略 |
 |------|------|-----------|---------|
-| `index_ring_by_vision` | 拇+食环形包络 | 物体截面直径 → 调拇/食弯曲量 | progressive + 触觉/电流冻结 |
-| `large_wrap_by_vision` | 五指包络 | 物体最大截面 → 调五指弯曲 | progressive + 触觉/电流冻结 |
+| `index_ring` | 拇+食环形包络 | 物体截面直径 → 调拇/食弯曲量 | progressive + 触觉/电流·力矩冻结 |
+| `large_wrap_by_vision` | 五指包络 | 物体最大截面 → 调五指弯曲 | progressive + 触觉/电流·力矩冻结 |
 
 **三阶段执行流程：**
 
 ```
 P1 (0.4s): 非参与手指先张开
 P2 (0.5s): 参与手指闭合到视觉目标
-P3 (持续): 无接触 → 渐进闭合 (25–30/s)；接触后冻结（触觉或电流增量，阈值见 `contact_thresholds.yaml`）
+P3 (持续): 无接触 → 渐进闭合 (25–30/s)；接触后冻结（触觉或电流/力矩增量，阈值见手型 YAML / `contact_thresholds.yaml`）
 ```
 
-**电流/触觉阈值**：可在 `config/contact_thresholds.yaml` 或 `gesture_node` ROS 参数中调节（如 `contact_current_delta`、`hold_safe_current`）。无触觉时默认以相对基线 **270 mA** 增量判定接触。
-
+**接触阈值**：可在手型 `config/*.yaml` 的 `gestures.*.contact`、或 `config/contact_thresholds.yaml` / `gesture_node` ROS 参数中调节。O20 默认电流增量约 **270 mA**；O6 用 `contact_delta_torque_pct`；L6 以触觉为主。
 **尺寸自适应**：物体尺寸变化超过 2mm 时触发目标更新，经 250ms blend 平滑过渡。
 
 ### 侧向夹持类（2 个）
@@ -110,12 +193,12 @@ P3 (持续): 无接触 → 渐进闭合 (25–30/s)；接触后冻结（触觉�
 
 ```bash
 # 完整执行（默认 full）
-ros2 topic pub --once /hand_gesture_cmd std_msgs/String "data: 'thumb_adduction_grip'"
+ros2 topic pub --once /left_hand/gesture_cmd std_msgs/String "data: 'thumb_adduction_grip'"
 
 # 分步执行
-ros2 topic pub --once /hand_gesture_cmd std_msgs/String "data: 'thumb_adduction_grip prep'"
+ros2 topic pub --once /left_hand/gesture_cmd std_msgs/String "data: 'thumb_adduction_grip prep'"
 # ... 机械臂就位 ...
-ros2 topic pub --once /hand_gesture_cmd std_msgs/String "data: 'thumb_adduction_grip close'"
+ros2 topic pub --once /left_hand/gesture_cmd std_msgs/String "data: 'thumb_adduction_grip close'"
 ```
 
 **`thumb_adduction_grip` 执行流程（full 模式）：**
@@ -130,72 +213,46 @@ P5 (持续):  渐进夹紧 → 触觉冻结
 
 `prep` 在 P3 结束后暂停（`grasp_state = "ready"`），等待 `close` 命令继续 P4+。
 
-### 非视觉捏取 / 包络类（6 个）
+### 力控包络类（7 个）
 
-这些原语不在 `GATED_PRIMITIVES` 中，不要求 3D bbox 或 GraspGate。`ring` 和 `middle_ring` 使用内部预成型、分指闭合和保持状态机；其余 4 个主要采用固定姿态插值，其中精细捏取支持触觉/堵转停指。
-
-| 指令 | 手形与执行方式 | 支持手型 |
-|------|---------------|----------|
-| `tripod` | 拇指与食指、中指形成三点对捏 | O20 / O6△ / L25 / L20 |
-| `ring` | 拇指与食指、中指依次力控闭合 | O20 / O6 / L25 / L20 |
-| `middle_ring` | 拇指与中指依次力控闭合 | O20 / O6 / L25 / L20 |
-| `index_pinch` | 拇指与食指精细对捏 | O20 / O6△ / L25 / L20 |
-| `middle_pinch` | 拇指与中指精细对捏 | O20 / O6△ / L25 / L20 |
-| `parallel_extension` | 拇指与四指平行伸展夹持，固定姿态 lerp | O20 / L25 / L20 |
-
-### 视觉力控包络类（7 个）
-
-基于 `object_size`（及可选 mesh 预选型）预成型，逐指电流检测接触后停止。**经 GraspGate 门控后执行**。
-
-**Mesh 目录（可选，用于 thumb_rot 预选型）：**
-
-```
-data/mesh_model/{label}/model.obj
-```
-
-- 默认根目录：仓库内 `data/mesh_model/`
-- 覆盖路径：`export MESH_MODEL_DIR=/path/to/meshes`
-- `{label}` 须与感知 `bboxes_3d.label` 一致（或通过 launch 参数 `target_object_label` 指定；空=自动选最高 score）
-- 无 mesh 时回退到 `object_size` 估算宽度
+基于 `object_size`（及可选 mesh 预选型）预成型，逐指接触检测后停止（触觉 / 电流 / 力矩，见上文「手型与力反馈」）。O20 路径常经 GraspGate；O6/L6 多用 `sequential_force_close` 引擎（MCP 力控）。
 
 | 指令 | 对抗手指 | 适用场景 |
 |------|---------|---------|
-| `middle_ring_by_vision` | 拇 vs 中 | 中等物体对捏 |
-| `ring_by_vision` | 拇 vs 食+中 | 柱形/瓶状物体 |
-| `small_warp_by_vision` | 拇 vs 食+中+无+小 | 小型多面体全手抓取 |
-| `no_index_warp_by_vision` | 拇 vs 中+无+小 | 食指需保持伸出的场景 |
-| `hook_by_vision` | 无拇指，食+中+无+小 | 把手/挂钩/环形物体 |
-| `tripod_by_vision` | 拇 vs 食+中 | 三指三角支撑（笔、螺丝刀柄） |
-| `palmar_by_vision` | 掌心 vs 食+中+无+小 | 强力掌心包络、球体/多面体 |
+| `middle_ring` | 拇 vs 中 | 中等物体对捏 |
+| `ring` | 拇 vs 食+中 | 柱形/瓶状物体 |
+| `small_warp` | 拇 vs 食+中+无+小 | 小型多面体全手抓取 |
+| `no_index_warp` | 拇 vs 中+无+小 | 食指需保持伸出的场景 |
+| `hook` | 无拇指，食+中+无+小 | 把手/挂钩/环形物体 |
+| `palmar` | 掌心 vs 食+中+无+小 | 强力掌心包络、球体/多面体 |
 
-**统一两阶段算法（middle_ring_by_vision / ring_by_vision / small_warp_by_vision / no_index_warp_by_vision / hook_by_vision / tripod_by_vision / palmar_by_vision）：**
+**统一两阶段算法（middle_ring / ring / small_warp / no_index_warp / hook / palmar）：**
 
 ```
 Phase 1 — 预成型 (0.5s):
-  根据 object_size（或 mesh 宽度）选择 thumb_rot 等预备角
+  根据 object_size（或 mesh 宽度）选择 thumb_rot 等预备角（无 tip/rot 的手型跳过）
   快速 lerp 到预备姿态（手指半张开）
 
 Phase 2 — 力控闭合 (持续):
   各手指独立以固定速率闭合
-  逐指监测电流增量 > `contact_current_delta`（或窄物体原语 `contact_current_delta_narrow`）→ 该指停止
+  触觉优先；否则监测电流/力矩增量超阈 → 该指停止
   全部参与指停止 → grasp_state = "contact"
-  持握安全电流上限: `hold_safe_current`（默认 800 mA）
+  持握安全上限: O20 `hold_safe_current`（默认 800 mA）；O6 `hold_safe_torque_pct`
 ```
 
 运行中需 `tcp_pose`；有 `object_pose` 时物体须在掌心前方 2–15 cm，否则 `_hold()` 保持。
-
 ### 定位捏取 / 定位包络类（4 个）
 
 固定目标姿态 + lerp，**不经 object_size 自适应、不用电流力控**，但须经 **GraspGate** 并在运行中校验 TCP/物体相对位姿。
 
 | 指令 | 手形 | 典型场景 | 过渡 |
 |------|------|---------|------|
-| `index_pinch_by_vision` | 拇+食指尖对捏，其余伸直 | 螺丝、针、薄片 | 0.5s lerp |
-| `middle_pinch_by_vision` | 拇+中对捏，食指外展避让 | 需保持食指自由的捏取 | 0.5s lerp |
-| `parallel_extension_by_vision` | 五指伸直，拇 vs 四指平行夹持 | 书本、卡片、平板 | 0.6s lerp |
-| `disk_by_vision` | 四指 C 弧 + 拇指侧摆合拢 | 盘、碟、扁圆物体 | 内部三阶段 1.4s |
+| `index_pinch` | 拇+食指尖对捏，其余伸直 | 螺丝、针、薄片 | 0.5s lerp |
+| `middle_pinch` | 拇+中对捏，食指外展避让 | 需保持食指自由的捏取 | 0.5s lerp |
+| `parallel_extension` | 五指伸直，拇 vs 四指平行夹持 | 书本、卡片、平板 | 0.6s lerp |
+| `disk` | 四指 C 弧 + 拇指侧摆合拢 | 盘、碟、扁圆物体 | 内部三阶段 1.4s |
 
-**`disk_by_vision` 内部三阶段（非 prep/close 命令）：**
+**`disk` 内部三阶段（非 prep/close 命令）：**
 
 ```
 P1 (0.4s): 拇指 abd 侧摆至中指对齐位
@@ -209,33 +266,21 @@ P3 (0.5s): 拇指 base/rot/tip 合拢握住
 - 有 `object_pose` → 掌心前方 2–15 cm，否则 hold
 - 无 `object_pose` 时跳过前方距离检查（GraspGate 已做 H/XY/Fwd）
 
-### L25 / L20 动态操作类（5 个）
-
-这些原语仅进入 L25 白名单；L20 复用 L25 档案，因此支持相同指令。O20 和 O6 会因不在 allowlist 中拒绝执行。
-
-| 指令 | 动作 |
-|------|------|
-| `index_flick` | 食指伸出后进行圆周拨动 |
-| `index_middle_flick` | 食指和中指伸出后同步圆周拨动 |
-| `twist2digit` | 拇指、食指捏取后反复扭动 |
-| `twist3digit` | 拇指、食指、中指捏取后反复扭动 |
-| `twist5digit` | 五指捏取后反复扭动 |
-
 ---
 
 ## auto 命令映射
 
-发送 `auto` 时，根据感知输出的 `grasp_type` 和当前手型档案中的 `grasp_type_map` 选择原语：
+发送 `auto` 时，根据感知输出的 `grasp_type` 自动选择原语（`grasp_mapping.py`）：
 
 ```
-grasp_type    O20 / L25 / L20                  O6
-──────────────────────────────────────────────────────────
-precision     index_ring_by_vision             middle_ring
-lateral       index_middle_adduction_grip      thumb_adduction_grip
-power         large_wrap_by_vision             ring
+感知 grasp_type    →    原语
+─────────────────────────────
+precision          →    index_ring
+lateral            →    index_middle_adduction_grip
+power              →    large_wrap
 ```
 
-无 `grasp_type`、类型未知或映射结果不受当前手型支持时，不执行任何动作。其余原语需通过名称直接调用。
+无 `grasp_type` 或未知类型时不执行任何动作。新增定位/力控原语暂未纳入 auto 映射。
 
 ---
 
@@ -287,7 +332,8 @@ Executor 在状态变化时打印日志，方便调试。
 
 ## 添加新原语
 
-1. 创建 `primitives/my_gesture.py`：
+1. 创建 `primitives/my_gesture.py`（输出 **semantic_30**，有 Converter 时量为
+   `semantic_rad`；见 `units_radians_migration.md` / `semantic_30_refactor.md`）：
 
 ```python
 from ..primitive_base import HandGesturePrimitive, PrimitiveContext, PrimitiveResult, lerp_angles
@@ -299,33 +345,35 @@ class MyGesture(HandGesturePrimitive):
 
     def on_enter(self, current_angles):
         super().on_enter(current_angles)
-        # 初始化内部状态
 
     def compute(self, current_angles, elapsed, ctx) -> PrimitiveResult:
-        # 计算目标角度
-        target = [...]  # O20 20-DOF 语义空间；Executor 再映射到具体硬件
+        target = [...]  # S30，长度 30
         t = min(1.0, elapsed / 0.5)
         angles = lerp_angles(self._start_angles, target, t)
         return self._move(angles)
 ```
 
-2. 注册到 `primitives/__init__.py`：
+2. 无需修改 `primitives/__init__.py`（自动 discovery）。撞名 / 导入失败会在
+   启动期明确报错。
 
-```python
-from .my_gesture import MyGesture
-PRIMITIVE_REGISTRY["my_gesture"] = MyGesture
-```
+3. **必须**在 `primitive_catalog.py` 增加 `PrimitiveCatalogEntry`
+   （`requires` / `category`；若需 GraspGate 设 `gated=True`；若
+   `gesture_cmd` 支持 prep/close 设 `command_phased=True`）。
+   **不要**再手改 `grasp_gate.GATED_PRIMITIVES`——门控集由 catalog 派生。
 
-3. 在 `primitive_catalog.py` 的 `PRIMITIVE_CATALOG` 中补充类别、能力需求、门控和分阶段元数据。
+4. 各支持该原语的手型：`config/{hand}.yaml` 的 `primitives.supported` +
+   必要时 `gestures.` 段。
 
-4. 在需要支持该原语的 `config/o20.yaml`、`config/o6.yaml` 或 `config/l25.yaml` 中更新 `capabilities` 和 `primitives.supported`。L20 复用 L25 档案，无单独配置。
-
-5. 若需 GraspGate，加入 `grasp_gate.py` 中 `GATED_PRIMITIVES`。
+5. 若需 PlanGesture / Framework 名义规划：加入 `planable_primitives.py`
+   （仅纯静态、无接触闭环）。
 
 6. 测试：
 
 ```bash
-ros2 topic pub --once /hand_gesture_cmd std_msgs/String "data: 'my_gesture'"
+# 能力矩阵一致性（catalog / gate / phased / planable）
+python3 -m pytest test/test_capability_matrix_consistency.py -q
+
+ros2 topic pub --once /left_hand/gesture_cmd std_msgs/String "data: 'my_gesture'"
 ```
 
 ---
@@ -352,4 +400,4 @@ ros2 topic pub --once /hand_gesture_cmd std_msgs/String "data: 'my_gesture'"
 | 18 | ring_tip | 无名指指尖弯曲 | 0=伸直, 255=弯曲180° |
 | 19 | pinky_tip | 小指指尖弯曲 | 0=伸直, 255=弯曲180° |
 
-> O6 原语同样在 O20 20-DOF 语义空间计算，Executor 根据 `config/o6.yaml` 映射到 6 个硬件关节。L25/L20 映射到 25 个硬件关节：[15–19] 为五指中节，[20–24] 为与中节耦合的五指指尖；基础弯曲和拇指关节方向反转（0=弯曲，255=伸直），四指侧摆保持 O20 方向。具体映射见对应手型 YAML。
+> L25 (25-DOF) 新增 thumb_root2[15]、middle_root2[17]、thumb_tip→[20]、各指 tip→[21–24]，且角度方向反转（0=弯曲, 255=伸直）。详见 `primitive_base.py` 中 `HAND_CONFIGS["l25"]`。

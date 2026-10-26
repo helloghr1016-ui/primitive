@@ -1,0 +1,11 @@
+Hand gesture workbench backport
+
+The original hand_gesture_primitives code remains under the MIT license.
+The workbench_core, workbench_runner, workbench_client, workbench_cache,
+workbench_catalog, workbench_edit and workbench_ros modules include code
+extracted from evolabs/linker_lerobot, licensed under Apache-2.0.
+Their source baseline is linker_lerobot commit
+4e72f70 (feat/pi05_inference), src/linker_lerobot/hands and ros2.
+See LICENSE.linker-workbench for that license. Original copyright and
+attribution notices are retained. These modules do not change the license
+of the original MIT implementation.

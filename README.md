@@ -1,12 +1,18 @@
 # hand_gesture_primitives
+## 0. 项目简介
+[![ROS2 Jazzy](https://img.shields.io/badge/ROS2-Jazzy-blue)](https://docs.ros.org/en/jazzy/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Hand: O20](https://img.shields.io/badge/Hand-O20-orange)](https://github.com/linker-bot/linkerhand-o20-ros2)
+[![Hand: O6](https://img.shields.io/badge/Hand-O6-blue)](https://github.com/linker-bot/linkerhand-o6-ros2)
 
-LinkerHand 手势原语与网页示教工作台。提供内置原语、感知/力控原语、自定义多阶段手势，
-以及速度调节、按住推进/暂停续播、自定义动作进度控制。支持独立 Mock 和 ROS 驱动接入；
-普通示教与自定义手势不需要视觉模型权重。
+当前绝大多数自动化产线、小型机器人平台仍普遍采用简易二指爪夹作为末端执行器，反观五指灵巧手虽具备高自由度与丰富接触形态，但在真实产线、实验室和桌面操作场景中，**从「能动手」到「稳定抓得准」** 之间仍隔着一道工程鸿沟：关节空间复杂、感知噪声大、抓取策略难以复用。本项目由灵心巧手算法团队研发推出，针对灵巧手落地难、控制繁琐的工程痛点开展优化迭代。
 
-运行版本：**0.2.2**，包含网页工作台、独立安装流程和配套使用文档。
-包版本与 Git 标签分别管理；固定复现时请记录公开仓库的完整提交 SHA。
-功能、兼容性及已知限制见 [0.2.2发布说明](docs/releases/0.2.2.md)。
+**hand_gesture_primitives** 的目标，是把灵巧手控制从「逐关节调参」升级为 **可组合、可感知、可门控的手势原语（Gesture Primitives）**，让开发者用一条字符串命令触发经过验证的抓取/释放动作，并与视觉感知、机械臂 TCP 位姿、触觉/电流反馈协同工作——**加速灵巧手在真实场景中的部署与迭代**。
+
+本项目基于 ROS2 Jazzy 版本开发，适配LinkerBot灵巧手，提供标准化手势原语控制，基于触觉与力矩的实时反馈实现自适应抓取。
+
+项目详细文档:
+[手势原语发布文档](https://alidocs.dingtalk.com/i/nodes/R4GpnMqJzGzNeyYDCkm0qyox8Ke0xjE3)
 
 ## 1. 文档导航与使用范围
 

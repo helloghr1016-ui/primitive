@@ -20,12 +20,12 @@ git rev-parse HEAD
 需要复现时，在干净的新克隆中执行 `git checkout --detach PUBLIC_COMMIT_SHA`，
 其中 `PUBLIC_COMMIT_SHA` 替换为已记录的公开提交 SHA。
 
-`0.2.2` 是包版本号，本次代码同步不创建同名 Git 标签。不要假定公开仓库中已存在
-`v0.2.2`；文档和源码应从同一个公开提交读取。
+`0.2.2` 是包版本号；Git 标签以仓库实际提供的版本为准。文档和源码应从同一个
+公开提交读取。
 
 完整 Git 源码包含原语、消息、感知示例、相机源码及已跟踪的第三方代码；模型权重
 另行获取。Python wheel 和 sdist 只交付原语包及其资源，不能替代完整的感知和相机
-工程。本文的源码安装流程使用上述完整克隆，无需额外的内部离线交付包。
+工程。本文的源码安装流程使用上述完整克隆。
 
 | 目录 | 用途 |
 | --- | --- |
@@ -182,7 +182,7 @@ python -c 'import hand_gesture_primitives,pydantic; print(hand_gesture_primitive
 ## 6. 真实ROS接入前提
 
 本仓库通过已有ROS驱动控制手，不包含通用CAN/SDK驱动的一键安装。
-驱动按你使用的设备仓库或linker站点配置部署。普通动作至少确认：
+驱动按设备厂商提供的部署说明安装。普通动作至少确认：
 
 - 驱动提供新鲜关节反馈，默认`/joint_states`，关节名称、顺序与手型匹配。
 - 控制后端与目标话题一致。下例使用`ros2_control`的弧度目标；已有`legacy_cb`
@@ -197,8 +197,8 @@ python -c 'import hand_gesture_primitives,pydantic; print(hand_gesture_primitive
 面板后发送stop并确认idle，再激活所选手的动作控制器，由操作者明确执行动作。
 驱动/控制器名称因部署而异，状态检查方式见[工作台播放排查](workbench.md)。
 
-下面是真实接入的参考命令，不属于本次已跳过的现场验收。不要在同一侧重复启动
-原语节点；已有节点时只连接面板。
+以下示例要求先完成上述驱动和控制器配置。同一侧只运行一个原语节点；已有节点时
+只连接面板。
 
 ## 7. 单手与双手使用示例
 
@@ -228,7 +228,7 @@ ros2 run hand_gesture_primitives teach_panel --ros-args \
 ```
 
 也可用`teach_panel.launch.py`，但要明确`launch_gesture_node`和`launch_pose_server`；
-现场已有原语节点时保持`launch_gesture_node:=false`。本指南的网页直接使用共享姿态库，
+已有原语节点时保持`launch_gesture_node:=false`。本指南的网页直接使用共享姿态库，
 不另行启动`pose_library_server`；组合launch可显式设置`launch_pose_server:=false`。
 已有其他客户端需要独立姿态服务时，按其部署配置保留该服务。
 
@@ -291,7 +291,6 @@ ros2 run hand_gesture_primitives pub_gesture_cmd -- right named_pose:my_grip
 - 页面有进度但手不动：检查当前侧、对应动作控制器是否active；新鲜反馈不等于动作控制器已激活。
 - 感知原语不可用：检查目录显示的具体原因，以及视觉/TCP/FK/力反馈/gate；安装权重本身不等于感知数据已接通。
 - 端口被占用：选择另一HTTP端口，并同步调整浏览器地址与SSH转发。
-- 更新已发布版本：保留原数据和旧安装，在新目录安装；核对版本、路径和Mock后再按现场部署流程切换。
+- 更新已发布版本：保留原数据和旧安装，在新目录安装；核对版本、路径和Mock后再按设备部署流程切换。
 
-当前版本的软件/用户反馈/跳过项分别见[发布说明](releases/0.2.2.md)。
-本指南中的真机与感知命令是后续部署参考，不表示本轮已经执行这些现场步骤。
+当前版本的功能和限制见[发布说明](releases/0.2.2.md)。

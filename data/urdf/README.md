@@ -11,7 +11,8 @@ e.g. `linkerhand_l6v3.1_left.urdf` satisfies a request for `l6` / `left`.
 
 Override root: `export LINKERHAND_URDF_DIR=/path/to/linkerhand-urdf`
 
-Search order: `data/urdf` → `LINKERHAND_URDF_DIR` → installed package share → `~/{gcl_ws,gitea_ws,ros_ws,cad_ws}/.../linkerhand-urdf` → `/opt/linkerhand/urdf`
+For reproducible deployments, use the bundled model or explicitly configure
+`LINKERHAND_URDF_DIR`. Legacy workspace search paths are only a compatibility fallback.
 
 Nodes may also take an explicit `urdf_path` parameter, which bypasses the search.
 
@@ -41,5 +42,5 @@ use the ROS/system package rather than replacing apt NumPy/SciPy with pip builds
 
 FK degrades rather than breaking gesture control:
 
-- `gesture_node` — all gesture primitives still run; fingertip topic/markers are not published
+- `gesture_node` — fingertip topic/markers are unavailable; FK-dependent primitives require an appropriate model
 - `joint_state_bridge` — exits with an error (its only job is driving the mesh model via FK)

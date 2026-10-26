@@ -1,7 +1,7 @@
 """Ruff 门禁 — 取代原 ament_flake8 / ament_pep257 / ament_copyright。
 
 风格权威为仓库根 ``pyproject.toml`` 的 ``[tool.ruff]``（99 列、select E/F/I），
-与上游 luban_framework 保持一致；ament 默认规则（79 列等）与之结构性冲突，故不再使用。
+ament 默认规则（79 列等）与仓库配置不同，统一使用 Ruff 检查。
 
 **扫描范围限定为 ``hand_gesture_primitives/``**（本包）。仓库内 ``perception/``
 等既有目录尚有历史遗留问题（F821/F841/F401/E402 等），不纳入本门禁，

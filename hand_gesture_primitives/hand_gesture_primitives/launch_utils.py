@@ -6,18 +6,11 @@ Dual-hand public topics (side = left|right):
   /{side}_hand/tcp_pose|object_pose
   /{side}_hand/grasp_gate/status|selected_label
   /{side}_hand/stream_target
-  /{side}_hand/save_pose|list_poses|...（POSE_SERVER=1）
+  /{side}_hand/save_pose|list_poses|...
 
-hand_type / hand_joint:
-  - 机载 dual_arm 默认 L25；O6/L6/O20/G20 手-only 由 linkerhand_hardware launch 传入
-  - G20 整机可 LEFT/RIGHT_HAND_MODEL=g20（外观复用 L25 mesh，joint_order=l25_urdf）
-  - 可选 urdf_path：覆盖 FK 用官方 URDF（空则 urdf_utils 自动搜索）
-
-可选环境（由调用方读取后传入本模块）:
-  GESTURE_GATE=1     → with_gate
-  POSE_SERVER=1      → with_pose_server
-  TEACH_PANEL=1      → with_teach_panel（左手 8001 / 右手 8002；避开 eViz 8765）
-  HAND_SIDE / GESTURE_SIDE → 手-only 硬件侧（见 resolve_hand_only_sides；与 GESTURE 解耦）
+hand_type / hand_joint and the matching robot_description are supplied by the
+caller. Optional gate, pose server and teach panel nodes use the same configured
+hand type and side. An explicit urdf_path overrides FK model discovery.
 """
 
 from __future__ import annotations
@@ -53,8 +46,7 @@ def parse_gesture_sides(gesture_env: str, side_env: str = "left") -> List[str]:
     Enable with GESTURE=1|true|on, or GESTURE=both.
     Side via GESTURE_SIDE=left|right|both (default **left** for launch).
 
-    Note: teleop xr_direct_loop defaults to both when GESTURE_SIDE is unset —
-    keep env in sync when co-running with this helper.
+    Callers sharing command topics should pass the same explicit side.
     """
     g = (gesture_env or "").strip().lower()
     s = (side_env or "left").strip().lower()

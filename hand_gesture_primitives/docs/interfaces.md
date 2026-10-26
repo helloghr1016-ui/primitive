@@ -38,22 +38,18 @@
 
 | Topic | 谁发布 | 说明 |
 |-------|--------|------|
-| `/{side}_hand/tcp_pose` | 臂/TF 桥或上层 | vision / GraspGate 必需；机载默认未挂 |
-| `/{side}_hand/gesture_cmd` | teleop / program / 人工 | teleop 发此 topic。`GESTURE_SIDE`：**机载 launch 默认 left**；**teleop 未设置时默认 both**。联调请两边一致；JSON 可带 `hand_side` |
+| `/{side}_hand/tcp_pose` | 臂/TF 桥或上层 | vision / GraspGate 必需，由集成方提供 |
+| `/{side}_hand/gesture_cmd` | teleop / program / 人工 | 按目标侧发送；节点通过 `hand_side` 配置侧别，JSON 可带 `hand_side` |
 | 感知 bbox | `robot_perception` | 可共享 |
 
 迁移：旧集成若仍发 `/hand_gesture_cmd_exec`，需改为 `/{side}_hand/gesture_cmd(_exec)`，或启动时显式 `cmd_topic:=/hand_gesture_cmd_exec`（单手临时兼容；双手勿共用同一全局 topic）。
 
-### 本地验证路径
+### 安装与运行入口
 
-| 场景 | 命令 / launch | 说明 |
-|------|---------------|------|
-| 机载硬件 MOCK + RViz | `MOCK=1 GESTURE=both ros2 launch luban_bringup launch_onboard_nodes.py` | 固定手势；手型 **L25**；无 bbox/tcp/触觉 |
-| 机载 + 示教 | `MOCK=1 GESTURE=1 POSE_SERVER=1 TEACH_PANEL=1 ...` | 另开 `http://127.0.0.1:8001/`（右手 8002）；需 fastapi/uvicorn |
-| L6/O6 手-only + gesture | `MOCK=1 GESTURE=1 GESTURE_SIDE=left ros2 launch linkerhand_hardware launch_l6_hand.py` | 控制 stub；O6 换 `launch_o6_hand.py` |
-| 官方 URDF / FK 可视化 | `ros2 launch hand_gesture_primitives view_hand_urdf.launch.py hand_model:=L6` | GUI；live 加 `mode:=live hand_joint:=L6` |
-| 感知 mock（单侧） | `ros2 launch hand_gesture_primitives test_with_mock.launch.py` | 假 bbox；默认 O20；可 `hand_joint:=L6`；**不是** MOCK=1 |
-| 双手 gesture 节点 | `ros2 launch hand_gesture_primitives bimanual_gesture.launch.py` | 仅原语栈；需自备手控 |
+独立 Mock、ROS 原语节点和双手面板的完整启动步骤见
+[安装与启动指南](../../docs/getting-started.md)。ROS 接入要求先准备设备驱动、
+关节反馈和实际控制器 URDF；本仓库的 launch 文件只启动原语及相关消息处理节点。
+感知示例配置见[感知部署说明](../../docs/perception-setup.md)。
 
 ### 手型力反馈
 
@@ -160,8 +156,9 @@
 
 默认阈值见安装目录 `share/hand_gesture_primitives/config/contact_thresholds.yaml`，可按现场负载修改 YAML 或通过 launch 参数覆盖。
 
-> **量纲演进**：原语内部将统一为弧度；0～255 为过渡态；角度仅作输入/显示。详见
-> [`units_radians_migration.md`](./units_radians_migration.md)。驱动侧可独立升级，本包 T1 不改驱动。
+> **位置与量纲**：有真实 URDF 转换器时，原语结果使用 S30 语义布局中的弧度。
+> 旧 0–255 数据在兼容边界转换；姿态与控制器位置的区别见
+> [工作台数据约定](../../docs/workbench.md#数据与公共接口)。
 
 ---
 
@@ -305,7 +302,7 @@ ros2 run hand_gesture_primitives save_pose --ros-args \
 姿态文件：
 
 - 0.2.0 起：必须显式设置 `HAND_GESTURE_POSE_DIR`，文件为 `{hand}_{side}.json`；不再回退到 HOME
-- Docker / 竞赛推荐：`export HAND_GESTURE_POSE_DIR=/evo/config/hand_gesture_poses`（`docker_run.sh` 已注入），避免 recreate 丢库
+- 所有读写同一姿态库的进程使用相同持久化目录，例如 `export HAND_GESTURE_POSE_DIR="$HOME/hand-gesture-data/poses"`
 - JSON 损坏时会改名为 `*.corrupt.<ts>`，避免 upsert 静默清空整库
 
 ### STREAM 连续角
@@ -339,7 +336,7 @@ ros2 run hand_gesture_primitives export_primitive_poses -- \
   --output /tmp/factory_l25_left.pose_bundle.json
 
 # 目标机器导入（默认同名 skip）
-export HAND_GESTURE_POSE_DIR=/evo/config/hand_gesture_poses
+export HAND_GESTURE_POSE_DIR="$HOME/hand-gesture-data/poses"
 ros2 run hand_gesture_primitives pose_bundle_import -- \
   --input /tmp/left_g20.pose_bundle.json --strategy skip
 
@@ -349,19 +346,19 @@ ros2 run hand_gesture_primitives pose_bundle_import -- \
 ```
 
 `PlanGesture`（`/{side}_hand/plan_gesture`）仅做名义轨迹预览，可规划静态原语见
-`planable_primitives.PLANABLE_STATIC_PRIMITIVES`（与 Framework `plan-hand-command` 对齐）。
-vision/force 语义不可规划，应直接 `hand-command` 执行。
+`planable_primitives.PLANABLE_STATIC_PRIMITIVES`。
+vision/force 语义不可规划，须在满足感知/反馈条件后经 `gesture_cmd` 执行。
 
 多关键帧 Pose 规划：`primitive` 传 `pose <name>` / `pose:<name>` / `pose/<name>` /
 `named_pose:<name>` 时，按 MotionProgram 多段 AUTO 采样（要求 `semantic_v3|o20`，
-禁止 `hardware`）。Framework `manipulation.plan-hand-command` 的 `pose_name` 同效。
+禁止 `hardware`）。
 响应新增 `segments_json` 字段（JSON 数组 `[{name, start_index}]`），标记各段在
 `positions` 中的起始采样点索引，供 GUI 分段回放/高亮。
 
 ### Teach Web 面板
 
 ```bash
-# 先按 ../../docs/workbench.md 创建独立 Jazzy venv 并加载其 overlay。
+# 先按 ../../docs/getting-started.md 创建独立 Jazzy venv 并加载其 overlay。
 # Pydantic 2、Web 依赖与 colcon 入口必须使用同一解释器。
 export PYTHONNOUSERSITE=1
 # gesture_node 已在跑；默认 ros2_control_command_units:=radians，须传 robot_description
@@ -371,7 +368,6 @@ ros2 launch hand_gesture_primitives teach_panel.launch.py \
   g20_joint_order:=l25_urdf \
   robot_description:="..."
 # 浏览器打开 http://127.0.0.1:8001/（右手 8002）
-# 机载一键：GESTURE=both TEACH_PANEL=1（launch_utils 已传 radians + URDF）
 ```
 
 面板内部始终 hardware 0–255；`cmd_backend`/`ros2_control_command_units` 与 gesture_node 对齐（含 MOCK radians）。
@@ -381,7 +377,7 @@ ros2 launch hand_gesture_primitives teach_panel.launch.py \
 - `POST /api/pose_bundle/import?strategy=skip|overwrite|rename&verify_checksum=true`（body=bundle JSON）→ 合并入库；过滤后 0 导入返回 HTTP 409
 - `POST /api/pose_bundle/import_factory?overwrite=false` → 写入 `preset_*` 静态终态
 
-构建依赖：先 `scripts/build.sh -p hand_gesture_primitives_msgs hand_gesture_primitives`，再启 `POSE_SERVER` / Teach。
+构建和消息依赖按[安装指南](../../docs/getting-started.md)准备；运行面板时加载同一 ROS overlay。
 
 **L25 指尖**：与指中机械耦合，且 ros2_control 无 tip 主动关节；Teach 面板将 tip 标为**耦合/只读**（灰底），拖指中时 tip 自动跟随；保存/下发前服务端也会强制 tip=mid。
 
@@ -521,13 +517,6 @@ ros2 launch hand_gesture_primitives bimanual_gesture.launch.py \
 # 左右各自 /left_hand/... 与 /right_hand/...
 ```
 
-机载：
-
-```bash
-GESTURE=both GESTURE_GATE=0 ros2 launch luban_bringup launch_onboard_nodes.py
-# 或 GESTURE=1 GESTURE_SIDE=both
-```
-
 ### 带 Mock 感知测试
 
 ```bash
@@ -537,7 +526,8 @@ ros2 launch hand_gesture_primitives test_with_mock.launch.py \
 
 ### RViz 手模型可视化
 
-`hand_model` 决定加载哪份官方 URDF（`evo_work` / `linkerhand-urdf`）；`hand_joint` 仅 **live** 模式用于 FK 映射。
+`hand_model` 选择手型 URDF；`hand_joint` 仅 **live** 模式用于 FK 映射。
+L25/L6 等未随包提供的模型须按[模型说明](../../data/urdf/README.md)配置外部 URDF 与 mesh。
 live 若二者不一致，launch 会把 URDF 对齐到 `hand_joint`。
 
 ```bash
@@ -558,18 +548,6 @@ ros2 launch hand_gesture_primitives view_hand_urdf.launch.py \
   mode:=live hand_joint:=L6 launch_rviz:=false
 ```
 
-手-only + 原语联调（L6，控制 stub ≠ 可视化 mesh）：
-
-```bash
-MOCK=1 GESTURE=1 GESTURE_SIDE=left \
-  ros2 launch linkerhand_hardware launch_l6_hand.py
-# 另开终端看官方 L6 mesh（可选）
-ros2 launch hand_gesture_primitives view_hand_urdf.launch.py \
-  hand_model:=L6 hand_side:=left
-ros2 topic pub --once /left_hand/gesture_cmd std_msgs/String "data: 'open'"
-# 若卡 Waiting for subscription，改用（推荐）:
-# ros2 run hand_gesture_primitives pub_gesture_cmd -- left open
-```
 ---
 
 ## 典型集成拓扑
@@ -642,4 +620,4 @@ ros2 topic pub --once /left_hand/gesture_cmd std_msgs/String "data: 'open'"
 
 兼容 LinkerHand O20 / L25 / O6 / L6 驱动，通过 `hand_type` 参数自动适配关节数量与角度方向。
 L6 与 O6 同为 6-DOF 欠驱动布局；当前 C++ SDK 无真实电流（`capabilities.current=false`），力控以触觉优先；`hand_type:=l6`。
-手-only 硬件：`ros2 launch linkerhand_hardware launch_l6_hand.py`（`MOCK=1` 可无真机）。
+硬件驱动按设备厂商提供的部署说明启动，再将其反馈和目标话题与上述接口对接。

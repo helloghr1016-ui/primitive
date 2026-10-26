@@ -1,10 +1,5 @@
 """URDF 路径与 mesh 工具（FK / RViz 共用）。
 
-.. note::
-   **Release 专有修改（从 luban_framework 同步时勿整体覆盖本文件）**：
-   URDF 搜索根改为本仓 ``data/urdf`` 优先，并移除了 luban 特有的
-   ``ISAAC_ROS_WS`` 与 ``~/*_ws/src/luban_framework`` 路径。
-
 职责:
   - 搜索官方手 URDF，顺序为 `data/urdf`（本仓约定，使用方自备）→
     `LINKERHAND_URDF_DIR` → 安装 share/hand_gesture_primitives/urdf → 外仓 →
@@ -49,13 +44,12 @@ def _repo_root() -> str:
 def _repo_robot_model_dirs() -> List[str]:
     """本仓手 URDF 根。
 
-    本仓约定为 ``data/urdf/``（与 ``data/mesh_model``、``data/weights`` 同级，
-    由使用方自备，见 data/urdf/README.md）；集成进 luban_framework 时则复用
-    其 ``src/robot_model/evo_work``。
+    优先使用 ``data/urdf/``，并保留外部集成的模型布局兼容搜索。
+    随包模型和外部模型配置见仓库根目录 data/urdf/README.md。
     """
     dirs: List[str] = [os.path.join(_repo_root(), "data", "urdf")]
 
-    # urdf_utils.py → 向上找仓库根（vendored 进 luban_framework 时命中）
+    # 向上查找兼容的外部模型布局。
     here = os.path.abspath(os.path.dirname(__file__))
     cur = here
     for _ in range(10):

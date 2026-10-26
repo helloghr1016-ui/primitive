@@ -1,11 +1,6 @@
 """用户示教姿态库 — 按规范手型（及可选手侧）分桶持久化。
 
-.. note::
-   **Release 专有修改（从 luban_framework 同步时勿整体覆盖本文件）**：
-   存储路径示例已中性化，不再引用 luban 容器特有的 ``/evo`` 挂载点。
-
-
-存储目录必须由 ``HAND_GESTURE_POSE_DIR`` 显式指定，站点启动器会自动设置。
+存储目录必须由 ``HAND_GESTURE_POSE_DIR`` 显式指定。
 带侧文件为 ``{canonical}_{side}.json``，旧版无侧文件为 ``{canonical}.json``。
 不读取用户 HOME 下的旧姿态目录，也不自动迁移或跟随该目录的链接。例如::
 
@@ -18,7 +13,7 @@
 ``positions_named``（名字→值）；**真相源仍是 ``positions`` 数组**，导入忽略旁路字段。
 
 多中间态: 可选 ``keyframes[]``（schema version=3）；禁止与 ``space=hardware``
-混用。详见 ``docs/motion_keyframes_and_progress.md``。
+混用。位置与量纲约定见仓库根目录的 ``docs/workbench.md``。
 """
 
 from __future__ import annotations

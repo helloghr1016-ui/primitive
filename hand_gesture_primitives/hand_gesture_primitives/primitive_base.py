@@ -507,7 +507,7 @@ class HandGesturePrimitive(ABC):
 
     有 Converter 时：``current_angles`` / 默认 ``target_angles`` 为 S30 **semantic_rad**；
     0～255 仅出现在 hardware 边界（NamedPose / STREAM / Pose 落盘）。
-    详见 docs/units_radians_migration.md 与 ``angle_bridge.AngleUnits``。
+    详见仓库根目录的 ``docs/workbench.md`` 与 ``angle_bridge.AngleUnits``。
     """
 
     def on_enter(self, current_angles: List[float]) -> None:

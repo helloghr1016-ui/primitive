@@ -41,7 +41,7 @@ _CONTROL_BASES = frozenset(
 )
 
 # 全集顺序 = 各手型文档清单并集；具体手型由 HandProfile allowlist 裁剪。
-# 与 docs/gesture_cmd_topic_test.md 一致。
+# 支持范围见仓库 README 的手型与原语清单。
 DEFAULT_SUITE: tuple[tuple[str, float, str], ...] = (
     ("mode primitive", 1.0, "setup"),
     ("init", 2.5, "safe"),

@@ -5,9 +5,9 @@
 `PRIMITIVE_REGISTRY`。任意层级以 `_` 开头的私有包或模块不会被导入。
 手型 allowlist / 能力见 `config/{o20,o6,l6,l25}.yaml`；ROS 接口见 [`interfaces.md`](interfaces.md)。
 
-> **量纲**：有 `robot_description` 时，执行核内部为 **semantic_rad**（O20 槽 + rad）；
+> **量纲**：有 `robot_description` 时，执行核内部为 **semantic_rad**（S30 语义布局 + rad）；
 > YAML / 代码中的 0～255 为标定源或硬件边界，经 Converter / ``AngleUnits`` 换算。
-> 详见 [`units_radians_migration.md`](units_radians_migration.md)。
+> 位置和量纲说明见[工作台数据约定](../../docs/workbench.md#数据与公共接口)。
 > 下文关节表中的 0～255 描述的是 **legacy 标定语义**，不是执行核运行时量纲。
 
 ---
@@ -333,7 +333,7 @@ Executor 在状态变化时打印日志，方便调试。
 ## 添加新原语
 
 1. 创建 `primitives/my_gesture.py`（输出 **semantic_30**，有 Converter 时量为
-   `semantic_rad`；见 `units_radians_migration.md` / `semantic_30_refactor.md`）：
+   `semantic_rad`；见[工作台数据约定](../../docs/workbench.md#数据与公共接口)）：
 
 ```python
 from ..primitive_base import HandGesturePrimitive, PrimitiveContext, PrimitiveResult, lerp_angles
@@ -364,7 +364,7 @@ class MyGesture(HandGesturePrimitive):
 4. 各支持该原语的手型：`config/{hand}.yaml` 的 `primitives.supported` +
    必要时 `gestures.` 段。
 
-5. 若需 PlanGesture / Framework 名义规划：加入 `planable_primitives.py`
+5. 若需 PlanGesture 名义规划：加入 `planable_primitives.py`
    （仅纯静态、无接触闭环）。
 
 6. 测试：

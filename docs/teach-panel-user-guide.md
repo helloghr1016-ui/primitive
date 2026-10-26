@@ -293,5 +293,4 @@ preset_ok_sign      preset_v_sign
 网页“停止”表示停止该执行请求，不代替硬件急停；停止确认也不等于已经测得电机物理停稳。
 关闭或刷新页面不应作为停止普通 AUTO 动作的操作方法：先明确停止，再退出编辑。
 
-软件/Mock、用户反馈的真机通过项目与跳过项目，分别记录在
-[功能兼容清单](workbench-feature-compatibility.md)和[发布说明](releases/0.2.2.md)。
+版本功能和已知限制见[发布说明](releases/0.2.2.md)。

@@ -1,8 +1,8 @@
-"""测试 launch: 启动 mock 感知 + 手势节点，无需外部设备即可验证自适应手势。
+"""测试 launch: 启动模拟感知与原语节点。
 
 说明:
-    本 launch = **感知 mock**（假 bbox），不是机载 MOCK=1 硬件回显。
-    整机 RViz 联调请用: MOCK=1 GESTURE=1 ros2 launch luban_bringup launch_onboard_nodes.py
+    本 launch 只模拟感知目标，不提供硬件驱动或关节反馈。
+    独立网页 Mock 和 ROS 接入步骤见仓库根目录 docs/getting-started.md。
 
 用法:
     # 默认: 圆柱形物体 (screwdriver)，左手，O20，domain 42

@@ -1,132 +1,43 @@
-# 独立手势工作台（0.2.2）
+# 工作台接口与运行约定（0.2.2）
 
-原语运行时、姿态库和工作台公共逻辑由本仓库提供。linker 使用相同的
-Python 服务，保留采集、遥操作和机器人接入。独立面板不依赖 LeRobot。
-真机通过已有 ROS 驱动控制；本版本没有新增 SDK/CAN 直连。
-首次使用请从 [下载、安装与启动](getting-started.md) 开始；网页每个按钮的用途、动作与
-保存副作用见 [网页操作指南](teach-panel-user-guide.md)，视觉/力控条件见
-[感知原语配置](perception-setup.md)。本文保留运行配置与公共接口约定。
-原有与新增能力的逐项对应见 [功能兼容验收清单](workbench-feature-compatibility.md)。
+本仓库提供原语运行时、姿态库和独立网页工作台。设备通过已有 ROS 驱动接入，
+Mock 模式在内存中模拟反馈，不创建 ROS 节点或硬件驱动。
 
-## 安装与 Mock
+- 下载、环境准备、单手与双手启动：[安装与启动指南](getting-started.md)。
+- 示教、编辑、回放及姿态包操作：[网页操作指南](teach-panel-user-guide.md)。
+- 视觉模型与感知接入：[感知配置](perception-setup.md)。
 
-Python 3.12 环境中，在仓库根目录安装：
+## 运行配置
 
-```bash
-python -m pip install './hand_gesture_primitives[teach,test]'
-export HAND_GESTURE_POSE_DIR="$HOME/hand-gesture-data/poses"
-teach_panel --mock --pose-dir "$HAND_GESTURE_POSE_DIR" \
-  --hand left:o6 --hand right:o6 --host 127.0.0.1 --port 8001
-```
-
-浏览器访问终端显示的本机地址。首页保留原示教面板的手掌滑条、关键帧树和姿态库，
-并在同一页提供内置原语、速度和侧别选择；`/legacy` 是同一界面的兼容入口。
-卡片式工作台作为可选入口放在 `/workbench`，两页共用原语目录与控制路径。
-Mock 只在内存模拟手，不创建 ROS 节点或硬件驱动。
-仅导入/计算原语无需 Web 或 ROS；`teach` extra 安装网页运行依赖。
-FK 为可选能力：ROS 环境使用发行版 Pinocchio；独立 Python 可安装 `fk` extra。
-不要把不同 NumPy ABI 的 ROS 与 pip Pinocchio 混用。
-安装包同时携带原仓库已有的 O6 右手 URDF 与 meshes，并支持安装后的资源发现；
-其他未随仓库提供的真实模型仍可通过 `LINKERHAND_URDF_DIR` 配置。模型资源与
-Pinocchio 依赖分开管理，不根据右手模型推测左手模型。
-
-## ROS 与双手
-
-使用 Ubuntu 24.04 的 ROS 2 Jazzy 和系统 Python 3.12。工作台要求
-**Pydantic 2**；Noble 的 `python3-pydantic` 是 v1，仅通过 apt/colcon 安装
-不能满足此要求。使用由系统 Python 创建、带 `--system-site-packages` 的独立
-venv：NumPy、SciPy、ROS 扩展继续来自 apt，Web 依赖装入 venv。
-不要使用 Conda Python 构建这个独立 ROS 环境；linker 自己的安装流程另行管理。
-
-在新终端、仓库根目录准备宿主依赖后执行：
-
-```bash
-source /opt/ros/jazzy/setup.bash
-sudo apt install python3-venv python3-numpy python3-scipy python3-yaml \
-  python3-filelock python3-colcon-common-extensions
-# Pydantic 由下述 venv 提供；不要让 rosdep 的 Noble 键代替 v2。
-rosdep install --from-paths hand_gesture_primitives messages --ignore-src \
-  --skip-keys python3-pydantic -y
-export HAND_GESTURE_INSTALL="$HOME/hand-gesture-0.2.2"
-/usr/bin/python3 hand_gesture_primitives/scripts/validate_ros_install.py \
-  --output "$HAND_GESTURE_INSTALL"
-source "$HAND_GESTURE_INSTALL/venv/bin/activate"
-source "$HAND_GESTURE_INSTALL/workspace/install/setup.bash"
-export PYTHONNOUSERSITE=1
-export HAND_GESTURE_POSE_DIR="$HOME/hand-gesture-data/poses"
-```
-
-输出目录必须尚不存在。脚本将源码复制到该目录，建立独立 build/install/log，
-不改写源码树、既有环境或姿态库。它从系统解释器生成 NumPy/SciPy 精确约束，
-仅升级 Web/构建依赖，并核对安装前后数值库版本和实际导入路径保持为 apt。
-ROS 环境不安装 `fk` extra，也不使用 pip 的 `--ignore-installed` 或 eager 升级。
-已有 Web/构建依赖 wheelhouse 时可加 `--wheelhouse /path/to/wheels`，此时 pip
-使用 `--no-index`；ROS 和 apt 依赖仍须预装。
-
-脚本显式使用 `venv/bin/python /usr/bin/colcon`，并向消息包传入同一
-`Python3_EXECUTABLE`。仅激活 venv 后运行系统 `colcon` 会被其 shebang 带回
-系统解释器，不能保证入口使用 Pydantic 2。脚本检查安装后的 `teach_panel`、
-`gesture_node` shebang、ROS overlay、消息导入及双手 Mock HTTP，结果写入
-`acceptance.json`，详细过程保存在 `pip.log`、`colcon.log`、`mock.log`。
-验证只启动 Mock 面板，不创建 ROS 节点或硬件驱动。换版本时使用新的输出目录，
-继续显式指向原有姿态目录。
-
-单手沿用 `teach_panel.launch.py`；`pose_dir` 默认读取上述环境变量。
-`primitive_speed` 默认 1.0，范围 0.25–3.0，`control_rate` 默认 10 Hz。
-`robot_description` 必须与实际驱动的关节顺序和弧度限位一致。
-
-下例的 `launch_gesture_node:=true` 会启动原语执行器，启动时会选择 `init`，可能让真机运动；
-不能当作只打开网页。真机运行前，先按 [安装与启动指南](getting-started.md) 中的
-控制器准备、停止确认和再启用流程处理，再运行下面的命令：
-
-```bash
-ros2 launch hand_gesture_primitives teach_panel.launch.py \
-  hand_type:=o6 hand_side:=right launch_gesture_node:=true \
-  pose_dir:="$HAND_GESTURE_POSE_DIR" primitive_speed:=1.0 \
-  robot_description:="$(cat /path/to/o6_controller.urdf)"
-```
-
-双手分别运行 gesture_node，命令和反馈话题按侧隔离。
-独立面板支持 `workbench_hands` ROS 字符串数组，如 `['left:o6','right:o6']`；
-空数组沿用现有 `hand_side` / `hand_type`。默认打开配置的 `hand_side`，不取
-`workbench_hands` 的首项；显式 URL `?side=left` 或 `?side=right` 可选择已配置的一侧。
-默认侧通过 `/api/workbench/state` 的 `default_side` 返回；Mock 双手默认右侧。
-双手的 robot_description 应包含两侧关节。
-面板通过 v2 工作台命令控制节点；它不再与 gesture_node 同时直接发布手目标。
-既有 `legacy_cb` 和 `ros2_control` 驱动接入方式仍保留；新版编辑器在两种
-接入方式下都要求真实 URDF 转换器，缺失时启动失败，不猜测真机关节限位。
-双手启动示例（原语节点和面板分别在独立终端运行，加载同一环境）：
-
-```bash
-ros2 launch hand_gesture_primitives bimanual_gesture.launch.py \
-  hand_type:=o6 pose_dir:="$HAND_GESTURE_POSE_DIR" \
-  robot_description:="$(cat /path/to/dual_o6_controller.urdf)"
-ros2 run hand_gesture_primitives teach_panel --ros-args \
-  -p hand_type:=o6 -p hand_side:=right -p "workbench_hands:=['left:o6','right:o6']" \
-  -p "robot_description:=$(cat /path/to/dual_o6_controller.urdf)"
-```
-
-`observe_only:=true` 可用于只读面板；观察模式不修改节点速度或发送动作。
+- 默认示教页为 `/`，`/legacy` 是兼容入口，`/workbench` 提供扩展编辑器和按住推进。
+- ROS 面板通过 `workbench_hands` 配置多手，默认侧由 `hand_side` 指定；URL 的
+  `?side=left` 或 `?side=right` 可选择已配置的一侧。双手 Mock 默认右侧。
+- `robot_description` 必须包含实际驱动使用的关节顺序和限位；双手配置需包含两侧关节。
+  面板通过原语节点发送动作，与节点使用相同的手型、侧别及姿态目录。
+- `observe_only:=true` 不发送动作、速度或停止命令，仍允许编辑保存姿态。
+- 安装包自带 O6 右手 URDF 与 meshes。其他模型通过 `LINKERHAND_URDF_DIR` 提供，
+  详见[模型说明](../data/urdf/README.md)。FK 依赖 Pinocchio；ROS 环境使用发行版提供的包，
+  独立 Python 环境可安装 `fk` extra。
 
 ## 真机播放排查
 
 内置原语与已保存姿态分别显示；内置原语不需要先导入出厂预设。出厂预设只是
 可规划原语的终态快照，并不代表全部支持的原语。姿态目录按手型、左右侧分库，
-新验收目录为空时不会自动读取其他目录或另一只手的数据。
+新姿态目录为空时不会自动读取其他目录或另一只手的数据。
 
 页面有新鲜关节反馈，只说明状态广播器正在工作，不能据此判定运动控制器已激活。
 若轨迹进度前进但手不动，先核对页眉侧别，再只读检查对应控制器：
 
 ```bash
-ros2 control list_controllers -c /left_hand_driver/controller_manager
-ros2 control list_controllers -c /right_hand_driver/controller_manager
+export HAND_CONTROLLER_MANAGER=/your_controller_manager
+ros2 control list_controllers -c "$HAND_CONTROLLER_MANAGER"
 ```
 
 如果对应的 forward controller 为 `inactive`，不要直接激活：执行器可能仍保留
 先前的目标。先停止该侧原语，等待工作台状态确认 `active=null`、
 `execution_kind=idle`、`command_pending=false`、`state_confirmed=true`，
-再按现场启动流程激活控制器，由用户重新明确点击播放。这里的控制器名称为
-linker 双 O6 配置示例，其他部署使用自己的 controller manager 和 controller 名称。
+再按设备启动流程激活控制器，由操作者重新明确点击播放。将示例中的
+`/your_controller_manager` 替换为设备实际使用的 controller manager 名称。
 
 ## 数据与公共接口
 
@@ -142,6 +53,20 @@ linker 双 O6 配置示例，其他部署使用自己的 controller manager 和 
   runner 返回关节目标，设备写入仍由宿主唯一发送者负责。
 - 原有 ROS 字符串命令和姿态 CLI 保留；示教面板为默认首页，`/legacy` 兼容入口
   与 bundle 导入导出继续可用。两种页面动作均经公共控制路径处理。
+
+
+### 位置与量纲
+
+| 接口 / 字段 | 位置表示 |
+| --- | --- |
+| `PoseDraft.positions` | 实际控制器关节顺序的弧度，长度为该手型有效自由度 |
+| 新建姿态文件 | `space=semantic_v3`、`unit=rad`，固定 30 维 S30 语义布局 |
+| `PrimitiveResult.space=semantic_rad` | S30 语义布局中的弧度，依赖真实 URDF 转换器 |
+| `PrimitiveResult.space=semantic` | 无转换器时兼容的 S30 语义 0–255 表示 |
+| `PrimitiveResult.space=hardware` | 产品关节顺序的 0–255 表示，用于兼容硬件边界 |
+
+旧 hardware、semantic_o20 和 legacy255 数据在读取边界转换；不要将它们直接当作
+控制器弧度目标。接口与 ROS 消息字段详见[接口文档](../hand_gesture_primitives/docs/interfaces.md)。
 
 ## 交互和控制语义
 
@@ -166,16 +91,15 @@ linker 双 O6 配置示例，其他部署使用自己的 controller manager 和 
 编辑 token 的租约为 10 秒，单手同一时刻只有一个实时编辑者。
 实时跟随 0.5 秒未续约即停止。停止序号使晚到的旧更新失效。
 切帧、试播、离开页面和连接中断清除跟随；恢复后需要新的明确操作。
-linker 的录制冻结、输入 neutral 和显式恢复遥操作仍由其 Session 执行。
 
 轨迹结束与反馈到位分别显示。连续 3 条不同的新鲜反馈确认到位；
 等待超过 1 秒报告未到位并保持终点。进程内阈值为 0.03 rad；
 ROS executor 使用 3.0 硬件单位并只比较可观测通道。
 停止 ACK 表示执行器已停止处理该动作，不能作为电机物理停稳的证明。
 
-## 0.2.1 控制与进度契约
+## ROS 控制与进度协议
 
-ROS 工作台协议继续使用 v2。新增 `progress_controls: 1` 能力用于绑定执行身份的
+ROS 工作台协议使用 v2。`progress_controls: 1` 能力用于绑定执行身份的
 进度控制：preview 分配 `control_id`，可选 `initial_progress` 在首个控制周期前
 原子进入进度模式；后续 `kind=progress` 携带相同 `control_id` 和 `progress`。
 缺少能力的旧节点会明确提示升级，不退回未关联执行的进度命令。
@@ -186,7 +110,7 @@ ROS 工作台协议继续使用 v2。新增 `progress_controls: 1` 能力用于�
 迟到的确认不能恢复动作。窗口失焦、页面隐藏和指针捕获丢失都会释放按住推进；
 恢复焦点后需要重新按下。
 
-Python 原语结果新增可选 `PrimitiveResult.trajectory_finished`，缺省 `None` 保留
+Python 原语结果提供可选 `PrimitiveResult.trajectory_finished`，缺省 `None` 保留
 已有 done/engine 判定兼容。明确的终点标记用于统一普通与按住执行；名义时长只
 显示进度，不能替代终点或新鲜反馈。持续力控不因静止或经过足够时间而自动结束。
 
@@ -199,43 +123,22 @@ AUTO 完成处理返回示教，PROGRESS 和 held 不会自动退出。显式不
 动作；无效请求不撤销原有合法动作。O6 的 hand_info 与 motor_torque 使用独立
 时间戳，优先新鲜 hand_info，再选择新鲜 topic，读取或切换来源不刷新样本时间。
 
-## 验收与证据
+## 开发检查
 
-0.2.2 的发布验收范围与已有证据见 [发布说明](releases/0.2.2.md)。
-用户已反馈左右手自定义多阶段播放、调速、进度条播放通过，并于 2026-10-24
-明确跳过其余现场测试。跳过项不计通过，也不再作为本轮发布阻塞；下述流程保留为
-后续部署的验收方法，不表示本轮已经执行。
-
-在包目录运行原有与回迁测试：
+先按安装指南准备 Python 环境；运行 ROS 测试时还需编译消息包并加载对应 overlay。
+从仓库根目录进入原语包运行已有测试：
 
 ```bash
 cd hand_gesture_primitives
+python -m pip install '.[teach,test]'
 python -m pytest test
 ```
 
-纯 Python/Mock 测试和 Jazzy ROS 测试分开执行。测试使用临时姿态目录和
-隔离的 ROS domain，不能使用现场姿态库。发行前还需验证 wheel 安装后
-静态资源、配置和命令入口完整，以及不安装 linker 时能够启动面板。
+测试使用临时姿态目录与隔离的 ROS domain。缺少外部模型或 ROS 环境的测试会明确跳过。
+浏览器用例位于 `hand_gesture_primitives/test/browser/`，针对独立 Mock 服务验证界面操作。
+安装验证脚本检查消息导入、命令入口及双手 Mock；硬件驱动和感知部署需在目标设备上验证。
 
-双 O6 真机验收按以下顺序记录，两侧默认接口为左 can0 / 右 can1，现场核实后使用：
+## 数据升级
 
-1. 记录上游与 linker 提交、配置、固件、ROS domain、关节顺序和反馈频率。
-2. 单侧验证 open/pinch、自定义多帧、调速、暂停续播、逐关节跟随与停止。
-3. 双侧执行不同动作，确认姿态、控制权、状态、停止及节点重启互不串扰。
-4. 验证断联、租约失效和陈旧反馈；恢复后动作不得自动续播。
-5. 在 linker 的 inprocess 和 gesture_node 模式分别录制，核对实际命令、
-   姿态 revision、稳定菜单 ID 和速度事件。
-
-验收应区分自动化通过、模拟 ROS 通过与真机通过，并注明用户反馈的来源。
-设备不可用或被占用时，记录未执行原因；明确调整验收范围时，将对应项目记录为
-跳过，不计为通过。不得用 Mock 结果替代真机结果。
-
-## 来源与升级
-
-运行时回迁基线为内部 release `fe55014541c3abcffccb74632b992279bf4e6b12`，
-对应 linker 累计补丁 17 个修改文件与 3 个新模块。公共工作台模块另由
-linker `4e72f70` 抽取，来源及许可证见根目录 NOTICE。
-
-正式版本使用 Git commit 与逐文件清单锁定；安装时不再打 linker 的累计补丁。
-旧离线包兼容仅接受登记过的校验值；未知本地改动不覆盖。升级前保留原姿态目录
-及旧依赖包，版本切换不自动改写用户姿态文件。
+升级前保留姿态目录和旧安装，在新环境安装并确认路径、手型与侧别。跨机或跨目录迁移
+使用姿态包导入导出；版本切换不自动改写用户姿态文件。

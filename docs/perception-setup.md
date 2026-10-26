@@ -8,8 +8,7 @@
 只有选用仓库中的 `perception/` 示例，才需要本文的检测/分割模型。
 网页提供原语入口，不会替你下载权重、启动相机或生成机械臂 TCP。
 
-以下是按 0.2.2 源码核对的部署步骤。感知环境、GPU 推理和现场闭环没有在本轮重新安装或执行；
-环境求解、CUDA 扩展与标定仍取决于目标机器。本文作为部署参考，不代表已完成现场验收。
+以下步骤为可选感知部署参考，需按目标机器的 GPU、CUDA、相机及标定配置验证。
 
 ## 1. 软件分层与目录
 
@@ -33,7 +32,7 @@
 
 已有站点复现时，应使用站点保存的完整 wheelhouse/环境锁和实际 GPU 信息核对快照；
 不要对正在使用的环境直接执行 `conda env update --prune`。
-下面为新机器拆出默认检测所需依赖；**仅做源码、包元数据和安装来源核对，未在新 GPU 上部署复验**。
+下面列出默认检测所需依赖；请在目标 GPU 环境中完成导入和推理验证。
 
 下面从**完整检出的仓库根目录**开始；路径按你的克隆位置修改。每个感知终端都需设置：
 
@@ -57,7 +56,7 @@ mkdir -p "$PERCEPTION_WEIGHTS_DIR" "$PERCEPTION_WS" "$TORCH_HOME" "$HF_HOME"
 ## 2. 需要哪些源码和权重
 
 以下路径相对 `$PERCEPTION_WEIGHTS_DIR`。下载入口来自模型作者的官方仓库/发布页；
-2026-10-24 仅核对了元数据与文件清单，没有下载或运行大模型。
+具体模型修订和文件清单以所选版本的发布说明为准。
 
 | 功能 | 权重/配置及落点 | 官方入口 |
 | --- | --- | --- |
@@ -134,7 +133,7 @@ NumPy/OpenCV约束有明确包元数据依据：
 后续向这个环境加包时继续传入同一 constraints 文件，避免依赖解析升级 NumPy 或替换 CUDA wheel。
 
 这是首次创建命令；已有同名环境时先确认其来源，不覆盖其他部署。
-`pip check`、上述导入、后面的 `_C` 检查都通过，才继续 ROS 构建；这仍不等于模型推理已验收。
+`pip check`、上述导入和后面的 `_C` 检查都通过后，再继续 ROS 构建及模型推理验证。
 
 以下下载只写模型目录；使用此感知环境中已有的 `huggingface_hub`。
 配置文件从本仓库复制，BERT 路径改在复制品里，不修改 vendored 配置：
@@ -448,18 +447,7 @@ GDINO配置中的 `text_encoder_type` 也要指向目标机路径；源机器的
 复制模型文件不等于迁移手眼标定或手驱动配置。
 
 详细消息字段见[感知输出话题](../perception/docs/output_topics.md)，
-原语所需接口见[ROS 接口文档](../hand_gesture_primitives/docs/interfaces.md)，
-本轮发布验收范围见[0.2.2 发布说明](releases/0.2.2.md)。
+原语所需接口见[ROS 接口文档](../hand_gesture_primitives/docs/interfaces.md)。
 
-## 文档核对范围（2026-10-24）
-
-本指南核对了 0.2.2 源码 imports、vendored 模型的 requirements/setup、
-[PyTorch 历史版本安装指令](https://pytorch.org/get-started/previous-versions/)、
-[TorchAO 官方兼容表](https://github.com/pytorch/ao/issues/2919)及 CUDA wheel 索引，
-并读取了上文链接的 PyPI 依赖元数据和模型作者的文件清单/安装说明。
-没有下载或加载模型，也没有执行这套新感知/VLM环境的 GPU 部署复验。
-
-示例生成的 `perception-constraints.txt`、`vlm-constraints.txt` 仅约束各自参考环境；
-它们不是原语 0.2.2 已发布运行时依赖锁，也不改变核心原语的安装、版本或验收结论。
-完成目标机器部署后，应另外记录实际包清单、GPU/驱动/CUDA、外部源码提交和模型修订，
-不要把本指南的静态核对当成该机器的运行验证。
+示例生成的 `perception-constraints.txt`、`vlm-constraints.txt` 分别约束对应的参考环境。
+完成部署后记录实际包版本、GPU/驱动/CUDA、模型修订和外部源码提交，供后续复现。

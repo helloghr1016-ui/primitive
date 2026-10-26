@@ -2,11 +2,11 @@
 
 LinkerHand 手势原语与网页示教工作台。提供内置原语、感知/力控原语、自定义多阶段手势，
 以及速度调节、按住推进/暂停续播、自定义动作进度控制。支持独立 Mock 和 ROS 驱动接入；
-普通示教与自定义手势不需要视觉模型权重，也不依赖 LeRobot。
+普通示教与自定义手势不需要视觉模型权重。
 
 运行版本：**0.2.2**，包含网页工作台、独立安装流程和配套使用文档。
 包版本与 Git 标签分别管理；固定复现时请记录公开仓库的完整提交 SHA。
-本次同步的功能、兼容性及验收范围见 [0.2.2发布说明](docs/releases/0.2.2.md)。
+功能、兼容性及已知限制见 [0.2.2发布说明](docs/releases/0.2.2.md)。
 
 ## 1. 文档导航与使用范围
 
@@ -18,8 +18,7 @@ LinkerHand 手势原语与网页示教工作台。提供内置原语、感知/�
 | 理解网页每个按钮、编辑多帧、速度与进度、导入导出 | [网页功能与操作手册](docs/teach-panel-user-guide.md) |
 | 下载感知权重与模型源码，部署可选视觉/VLM示例 | [可选感知环境与权重部署](docs/perception-setup.md) |
 | 查看公共接口、控制约束、数据格式和开发测试 | [工作台技术说明](docs/workbench.md) |
-| 核对原有功能是否保留、新增功能对应哪些测试 | [功能兼容清单](docs/workbench-feature-compatibility.md) |
-| 排查O6实机驱动/反馈、现场历史问题 | [O6调试记录](docs/o6_debug_runbook.md) |
+| 查看版本功能和已知限制 | [0.2.2发布说明](docs/releases/0.2.2.md) |
 
 先选择需要的运行范围：
 
@@ -40,7 +39,7 @@ Pinocchio和真实手型URDF。安装包自带O6右手模型，左手及其他�
 
 ### 2.1 获取源码
 
-公开仓库可通过 HTTPS 克隆，无需内部仓库权限。普通克隆包含已跟踪的源码；AI权重另行下载。
+通过 HTTPS 克隆源码；AI权重按所需感知模块另行下载。
 
 ```bash
 git clone https://github.com/linker-bot/primitive.git
@@ -48,7 +47,7 @@ cd primitive
 export GESTURE_SOURCE="$(pwd)"
 ```
 
-使用 `git rev-parse HEAD` 记录所用源码版本。本次同步不创建 `v0.2.2` 标签。
+使用 `git rev-parse HEAD` 记录所用源码版本。
 完整下载、目录约定与固定提交的方法见[安装指南](docs/getting-started.md)。
 
 ### 2.2 先运行独立Mock网页

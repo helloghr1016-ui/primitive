@@ -61,7 +61,8 @@ source "$HOME/hand-gesture-mock-0.2.2/bin/activate"
 python -m pip install './hand_gesture_primitives[teach]'
 export HAND_GESTURE_POSE_DIR="$HOME/hand-gesture-data/mock-poses"
 export HAND_GESTURE_RUNTIME_STATUS_PATH="$HOME/hand-gesture-data/mock-runtime.json"
-teach_panel --mock --pose-dir "$HAND_GESTURE_POSE_DIR"   --hand left:o6 --hand right:o6 --host 127.0.0.1 --port 18002
+teach_panel --mock --pose-dir "$HAND_GESTURE_POSE_DIR" \
+  --hand left:o6 --hand right:o6 --host 127.0.0.1 --port 18002
 ```
 
 浏览器打开 `http://127.0.0.1:18002/`。首页是手掌滑条、内置原语与多帧姿态库；
@@ -75,7 +76,8 @@ teach_panel --mock --pose-dir "$HAND_GESTURE_POSE_DIR"   --hand left:o6 --hand r
 ```bash
 source /opt/ros/jazzy/setup.bash
 export HAND_GESTURE_INSTALL="$HOME/hand-gesture-ros-0.2.2"
-/usr/bin/python3 hand_gesture_primitives/scripts/validate_ros_install.py   --output "$HAND_GESTURE_INSTALL"
+/usr/bin/python3 hand_gesture_primitives/scripts/validate_ros_install.py \
+  --output "$HAND_GESTURE_INSTALL"
 source "$HAND_GESTURE_INSTALL/venv/bin/activate"
 source "$HAND_GESTURE_INSTALL/workspace/install/setup.bash"
 ```
@@ -115,7 +117,7 @@ ros2 run hand_gesture_primitives pub_gesture_cmd -- right stop
 
 
 ## 3\.1 规则说明
-- **支持型号**：与 `config/o20.yaml`、`config/o6.yaml`、`config/l25.yaml`、`config/l6.yaml`、`config/o30.yaml`、`config/g20.yaml` 中 `primitives.supported` allowlist 一致。**L20 与 L25 为同协议两个版本**：配置 `hand_joint:=L20` / `hand_type:=l20` 时按 L25 档案运行，凡表中支持 L25 的原语均同时支持 L20。
+- **支持型号**：与[手型配置](hand_gesture_primitives/hand_gesture_primitives/config)中各型号的 `primitives.supported` allowlist 一致。**L20 与 L25 为同协议两个版本**：配置 `hand_joint:=L20` / `hand_type:=l20` 时按 L25 档案运行，凡表中支持 L25 的原语均同时支持 L20。
 
 |手型|支持原语数|
 |---|---:|
@@ -128,7 +130,7 @@ ros2 run hand_gesture_primitives pub_gesture_cmd -- right stop
 |G20|37|
 
 > 当前共注册 40 个原语。上表由 `hand_profile.supported_primitives()` 导出，
-> 并由 `test/test_readme_matches_profiles.py` 持续校验，避免与代码脱节。
+> 并由[原语清单检查](hand_gesture_primitives/test/test_readme_matches_profiles.py)持续校验，避免与代码脱节。
 
 - **无接触手势原语**： 仅输入「话题字符串指令 \+ 当前关节状态」，无需视觉、TCP位姿。在关节反馈有效、当前控制权允许时执行，不经过抓取门控。
 

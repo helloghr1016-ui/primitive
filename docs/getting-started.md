@@ -127,6 +127,7 @@ sudo apt install python3-venv python3-numpy python3-scipy python3-yaml \
 从仓库根目录解析包依赖：
 
 ```bash
+export GESTURE_SOURCE="$HOME/primitive"  # 改为实际源码目录
 cd "$GESTURE_SOURCE"
 rosdep update
 rosdep install --from-paths hand_gesture_primitives messages --ignore-src \
@@ -186,7 +187,8 @@ python -c 'import hand_gesture_primitives,pydantic; print(hand_gesture_primitive
 
 - 驱动提供新鲜关节反馈，默认`/joint_states`，关节名称、顺序与手型匹配。
 - 控制后端与目标话题一致。下例使用`ros2_control`的弧度目标；已有`legacy_cb`
-  接入方式继续可用，其话题和单位按现有驱动配置设置。
+  接入方式需显式配置 `cmd_backend:=legacy_cb ros2_control_command_units:=hardware`；
+  其话题和关节顺序按实际驱动设置。
 - 所有相关终端使用与驱动相同的ROS domain与发现范围。
 - `robot_description`提供**实际控制器使用的关节顺序和限位URDF XML**。
 - 需要FK时另提供真实几何模型。控制器限位URDF不能自动代替完整FK模型，
@@ -273,7 +275,7 @@ ros2 run hand_gesture_primitives teach_panel --ros-args \
 ```bash
 ros2 run hand_gesture_primitives pub_gesture_cmd -- right stop
 ros2 run hand_gesture_primitives pub_gesture_cmd -- right open
-ros2 run hand_gesture_primitives pub_gesture_cmd -- right named_pose:my_grip
+ros2 run hand_gesture_primitives pub_gesture_cmd -- right "pose my_grip"
 ```
 
 `my_grip`必须已保存在当前O6右手库中。左手替换侧别为`left`。

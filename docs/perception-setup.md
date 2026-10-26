@@ -227,7 +227,7 @@ python -c "from robot_perception_msgs.msg import LabeledBBox3DArray; import robo
 旧构建脚本所需的 `PERCEPTION_ENV_NAME`、`WS_ROOT`、`PERCEPTION_MSGS_DIR`、`PKG_DIR`，
 也没有定义 VLM 脚本所需的 `VLM_ENV_NAME`、`VLM_HOST`、`VLM_PORT` 等。
 因此直接运行旧 `build_perception.sh` / `setup_vlm_env.sh` / `start_minicpm_vlm_server.sh`
-可能失败。本文用明确的环境、解释器和路径完成相同步骤，不要求修改生产脚本。
+可能失败。本文使用明确的环境、解释器和路径完成相应步骤。
 
 ## 5. 启动默认检测与接入原语
 
@@ -271,7 +271,7 @@ ros2 launch robot_perception detection_bbox.launch.py \
 目标、TCP 和标定必须采用一致的坐标系、米/弧度单位和时间基准。
 检测框出现不代表原语已经满足门控或力反馈条件；缺少标定时 3D 框可能为空。
 原语也可接其他感知的 `labeled_poses`，默认名为 `/camera_head/perception/labeled_poses`；
-本检测示例主要输出 `detection_bbox/bboxes_3d`，不保证发布前一话题。
+本检测示例输出 `detection_bbox/bboxes_3d`，不发布前一话题。
 
 只读检查示例：
 
@@ -306,7 +306,8 @@ deactivate
 
 VLM 需要自己的 NumPy 2/Transformers 5/GPTQ 环境，不能复用第 3 节的 ROS 感知环境。
 重设第 1 节变量和上述 `MINICPM_WEIGHT_DIR`，在新终端创建独立环境。
-下面是**Linux x86_64 / CUDA 12.8 的安装参考组合，尚未完成本轮模型加载或推理验证**：
+下面是 **Linux x86_64 / CUDA 12.8 的安装参考组合**。已核对版本元数据与上游兼容说明，
+尚未验证此组合在目标 GPU 上的模型加载和推理：
 
 - [模型作者说明](https://huggingface.co/openbmb/MiniCPM-V-4.6-GPTQ#inference-with-transformers)
   要求 Transformers ≥5.7，服务依赖使用 `serving` extra；此处保留快照中的 5.12.1。
@@ -394,8 +395,7 @@ git -C "$ROBOT_PERCEPTION_DIR/Pixal3D" rev-parse HEAD
 记录此次实际源码提交；0.2.2 并未锁定这份外部源码。根据其
 [官方安装说明](https://github.com/TencentARC/Pixal3D#installation)
 安装对应 GPU/PyTorch 的依赖和扩展，在主感知环境确认 `pixal3d.pipelines` 能导入后继续。
-仓库 [perception/readme.md](../perception/readme.md) 保留了既有环境的扩展版本记录，
-不能把那些 wheel 当作任意目标 GPU 的通用二进制包。
+外部 CUDA wheel 必须匹配实际 PyTorch、CUDA 和 GPU 架构，不应直接套用其他环境的二进制包。
 
 三个下载脚本的默认位置是**仓库父目录下的 `models/`**；以下在独立下载 venv 中显式指定运行目录：
 

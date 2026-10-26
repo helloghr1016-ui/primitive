@@ -9,7 +9,7 @@
 网页提供原语入口，不会替你下载权重、启动相机或生成机械臂 TCP。
 
 以下是按 0.2.2 源码核对的部署步骤。感知环境、GPU 推理和现场闭环没有在本轮重新安装或执行；
-环境求解、CUDA 扩展与标定仍取决于目标机器。本文不增加本轮已跳过的现场验收要求。
+环境求解、CUDA 扩展与标定仍取决于目标机器。本文作为部署参考，不代表已完成现场验收。
 
 ## 1. 软件分层与目录
 
@@ -38,7 +38,7 @@
 下面从**完整检出的仓库根目录**开始；路径按你的克隆位置修改。每个感知终端都需设置：
 
 ```bash
-export GESTURE_SOURCE="$HOME/hand_gesture_primitives_release"
+export GESTURE_SOURCE="$HOME/primitive"
 export ROBOT_PERCEPTION_DIR="$GESTURE_SOURCE/third_party/robot_perception"
 export PERCEPTION_WEIGHTS_DIR="$HOME/hand-gesture-data/perception-weights"
 export PERCEPTION_WS="$HOME/gesture-perception-ws-0.2.2"

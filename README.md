@@ -4,10 +4,9 @@ LinkerHand 手势原语与网页示教工作台。提供内置原语、感知/�
 以及速度调节、按住推进/暂停续播、自定义动作进度控制。支持独立 Mock 和 ROS 驱动接入；
 普通示教与自定义手势不需要视觉模型权重，也不依赖 LeRobot。
 
-运行版本：**0.2.2**，固定标签 `v0.2.2` 对应
-`ec195b3624054686f4a31d4fc78a1f628478bff8`。本次补充的上手文档在 `master`，
-适用于相同的0.2.2运行代码；已发布标签和linker依赖锁保持不变。
-发布范围与验收来源见 [0.2.2发布说明](docs/releases/0.2.2.md)。
+运行版本：**0.2.2**，包含网页工作台、独立安装流程和配套使用文档。
+包版本与 Git 标签分别管理；固定复现时请记录公开仓库的完整提交 SHA。
+本次同步的功能、兼容性及验收范围见 [0.2.2发布说明](docs/releases/0.2.2.md)。
 
 ## 1. 文档导航与使用范围
 
@@ -41,16 +40,16 @@ Pinocchio和真实手型URDF。安装包自带O6右手模型，左手及其他�
 
 ### 2.1 获取源码
 
-需要内部GitLab读取权限及SSH密钥。普通克隆会带上仓库已跟踪的源码；AI权重另行下载。
+公开仓库可通过 HTTPS 克隆，无需内部仓库权限。普通克隆包含已跟踪的源码；AI权重另行下载。
 
 ```bash
-git clone git@gitlab.linkerbot-evo.work:evolabs/hand_gesture_primitives_release.git
-cd hand_gesture_primitives_release
+git clone https://github.com/linker-bot/primitive.git
+cd primitive
 export GESTURE_SOURCE="$(pwd)"
 ```
 
-需要严格复现已发布运行版本时，在干净的新克隆中使用`git checkout v0.2.2`。
-完整下载、目录约定、固定提交及离线包使用见[安装指南](docs/getting-started.md)。
+使用 `git rev-parse HEAD` 记录所用源码版本。本次同步不创建 `v0.2.2` 标签。
+完整下载、目录约定与固定提交的方法见[安装指南](docs/getting-started.md)。
 
 ### 2.2 先运行独立Mock网页
 

@@ -6,28 +6,26 @@
 
 ## 1. 下载源码与选择版本
 
-需要内部GitLab读取权限及已配置的SSH密钥。在希望存放源码的目录运行：
+在希望存放源码的目录运行；公开仓库可直接通过 HTTPS 读取：
 
 ```bash
-git clone git@gitlab.linkerbot-evo.work:evolabs/hand_gesture_primitives_release.git
-cd hand_gesture_primitives_release
+git clone https://github.com/linker-bot/primitive.git
+cd primitive
 export GESTURE_SOURCE="$(pwd)"
-git log -1 --format='%h %s'
-```
-
-`master`包含0.2.2发布后的补全文档。严格复现发布源码时，在干净的新克隆中执行：
-
-```bash
-git checkout v0.2.2
 git rev-parse HEAD
 ```
 
-标签对应 `ec195b3624054686f4a31d4fc78a1f628478bff8`。标签不随文档更新移动；
-补充文档可在GitLab的`master/docs/`阅读。不要在保存有未提交修改的工作区直接切换版本。
+`main` 是公开维护主线。请保存最后一条命令输出的完整提交 SHA，作为此次安装的
+源码版本；审阅尚未合并的 PR 时，先按该 PR 的说明检出其分支，再记录 SHA。
+需要复现时，在干净的新克隆中执行 `git checkout --detach PUBLIC_COMMIT_SHA`，
+其中 `PUBLIC_COMMIT_SHA` 替换为已记录的公开提交 SHA。
 
-完整Git源码包含原语、消息、感知示例、相机源码及已跟踪的第三方代码；模型权重另行
-获取。发布的`hand-source.tar.gz`是原语格式3离线包，范围为原语/消息/文档/手部模型，
-不包含完整感知和相机工程；Python wheel也只安装原语包及其资源。
+`0.2.2` 是包版本号，本次代码同步不创建同名 Git 标签。不要假定公开仓库中已存在
+`v0.2.2`；文档和源码应从同一个公开提交读取。
+
+完整 Git 源码包含原语、消息、感知示例、相机源码及已跟踪的第三方代码；模型权重
+另行获取。Python wheel 和 sdist 只交付原语包及其资源，不能替代完整的感知和相机
+工程。本文的源码安装流程使用上述完整克隆，无需额外的内部离线交付包。
 
 | 目录 | 用途 |
 | --- | --- |

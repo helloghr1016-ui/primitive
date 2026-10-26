@@ -1,4 +1,4 @@
-> 版本提示：本文包含 2026-09 的历史实测。0.2.0 起须先设置 `HAND_GESTURE_POSE_DIR`；旧 HOME 路径仅描述当时数据，不再是默认查找路径。新回迁版本必须重新进行 [双 O6 验收](workbench.md#验收与证据)。
+> 历史记录：本文保留 2026-09 的站点调试流程和实测结果，其中硬件工作区、旧姿态路径与构建方式仅描述当时环境。新安装请先阅读[安装与启动指南](getting-started.md)；0.2.2 的验收范围见[发布说明](releases/0.2.2.md)。命令中的 `~/primitive` 按公开克隆目录举例，硬件路径需按实际部署调整。
 
 # O6 右手链路调试 Runbook（发布前验证）
 
@@ -34,10 +34,10 @@
 ## 1. 保护工作区
 
 ```bash
-cd ~/hand_gesture_primitives_release
+cd ~/primitive
 git status --short
 
-# data/urdf/o6/ 是 untracked，git diff 覆盖不到，必须单独备份
+# 历史调试时该模型未跟踪；当前版本已随仓库交付，现场修改仍可单独备份
 cp -r data/urdf/o6/ /tmp/o6-urdf-backup/
 git diff > /tmp/o6-gesture-before-pull.patch
 ```
@@ -50,7 +50,7 @@ git diff > /tmp/o6-gesture-before-pull.patch
 ## 2. 纯软件回归
 
 ```bash
-cd ~/hand_gesture_primitives_release
+cd ~/primitive
 colcon build --merge-install --packages-select \
   hand_gesture_primitives_msgs hand_force_msg robot_perception_msgs hand_gesture_primitives
 source install/setup.bash
@@ -93,7 +93,7 @@ sudo apt install -y ros-jazzy-ros2-control ros-jazzy-ros2-controllers \
 ```bash
 cd ~/luban_framework
 source /opt/ros/jazzy/setup.bash
-source ~/hand_gesture_primitives_release/install/setup.bash   # 提供 hand_force_msg 等依赖
+source ~/primitive/install/setup.bash   # 提供 hand_force_msg 等依赖
 
 colcon build --merge-install \
   --base-paths src/system src/robot_model src/control \
@@ -144,7 +144,7 @@ export ROS_DOMAIN_ID=77
 
 source /opt/ros/jazzy/setup.bash
 source ~/luban_framework/install/setup.bash
-source ~/hand_gesture_primitives_release/install/setup.bash   # 必须最后
+source ~/primitive/install/setup.bash   # 必须最后
 
 # 校验：输出必须指向 release 仓
 python3 -c "import hand_gesture_primitives as m; print(m.__file__)"
@@ -480,7 +480,7 @@ candump can0        # 另开终端跑；发手势命令时应能看到流量
 export ROS_DOMAIN_ID=77        # 必须，理由见 §4
 source /opt/ros/jazzy/setup.bash
 source ~/luban_framework/install/setup.bash
-source ~/hand_gesture_primitives_release/install/setup.bash
+source ~/primitive/install/setup.bash
 
 GESTURE=1 GESTURE_SIDE=right ros2 launch linkerhand_hardware launch_o6_hand.py
 ```
@@ -572,10 +572,10 @@ SDK 支持两种触觉硬件（`TSSP_JZG` 掌 20×28 / `TSSP_HWK` 掌 14×16，�
 ⚠️ 改完**必须同步到 install**，否则不生效（同 §3.3 的坑）：
 
 ```bash
-cp ~/hand_gesture_primitives_release/hand_gesture_primitives/hand_gesture_primitives/config/o6.yaml \
-   ~/hand_gesture_primitives_release/install/share/hand_gesture_primitives/config/o6.yaml
+cp ~/primitive/hand_gesture_primitives/hand_gesture_primitives/config/o6.yaml \
+   ~/primitive/install/share/hand_gesture_primitives/config/o6.yaml
 # 或重新构建
-cd ~/hand_gesture_primitives_release && colcon build --merge-install --packages-select hand_gesture_primitives
+cd ~/primitive && colcon build --merge-install --packages-select hand_gesture_primitives
 ```
 
 ---
@@ -727,8 +727,8 @@ r"^\|\d+\|([^|]+)\|"            # 原语表
 
 ```bash
 git fetch origin
-git diff origin/master...HEAD
-git log --oneline origin/master..HEAD
+git diff origin/main...HEAD
+git log --oneline origin/main..HEAD
 ```
 
 ---

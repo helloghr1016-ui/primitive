@@ -116,8 +116,9 @@ ros2 run hand_gesture_primitives pub_gesture_cmd -- right stop
 仍发公开入口，由门控转发。自定义、进度和旧接口见
 [接口说明](hand_gesture_primitives/docs/interfaces.md)。
 
-原代码采用MIT许可证，提取的公共工作台代码采用Apache-2.0；详见[NOTICE](NOTICE)、
-[MIT许可证](LICENSE)和[Apache-2.0许可证](LICENSE.linker-workbench)。
+原语实现及公司独立开发的工作台代码采用 [MIT 许可证](LICENSE)。O6 模型资源和
+`hand_force_msg` 保留原有 [Apache-2.0 许可](LICENSE.apache-2.0)，其他组件保留各自许可；
+适用范围见 [NOTICE](NOTICE)。
 
 # 3\. 手势原语清单
 

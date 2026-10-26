@@ -5,7 +5,9 @@
   <version>0.2.2</version>
   <description>LinkerHand 手势原语（O20/L25/O30/O6/L6/G20；内部 semantic_30）</description>
   <maintainer email="opensource@linkerbot.ai">LinkerHand Team</maintainer>
+  <!-- Implementation, including workbench modules: MIT. -->
   <license>MIT</license>
+  <!-- Bundled O6 model resources retain their existing Apache-2.0 license. -->
   <license>Apache-2.0</license>
 
   <exec_depend>rclpy</exec_depend>

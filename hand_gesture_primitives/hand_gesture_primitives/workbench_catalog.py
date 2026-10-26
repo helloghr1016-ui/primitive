@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: Apache-2.0
-# Extracted from linker_lerobot; see NOTICE for source and license attribution.
+# SPDX-License-Identifier: MIT
+# Independently developed LinkerHand workbench code; see LICENSE and NOTICE.
 """Shared model catalog for editors, teleoperation and execution guards."""
 
 from functools import lru_cache

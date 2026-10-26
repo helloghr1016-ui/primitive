@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: Apache-2.0
-# Adapted from linker_lerobot protocol tests; see NOTICE.
+# SPDX-License-Identifier: MIT
+# LinkerHand workbench protocol tests; see LICENSE and NOTICE.
 """Exercise both ends of the confirmed protocol with controllable message delivery."""
 
 import json

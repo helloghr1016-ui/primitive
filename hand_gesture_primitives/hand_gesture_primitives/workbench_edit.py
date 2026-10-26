@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: Apache-2.0
-# Extracted from linker_lerobot; see NOTICE for source and license attribution.
+# SPDX-License-Identifier: MIT
+# Independently developed LinkerHand workbench code; see LICENSE and NOTICE.
 """Host-independent editor leases and incremental live-control arbitration.
 
 The host serializes methods on its control thread and supplies permission, input

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Independently developed LinkerHand workbench code; see LICENSE and NOTICE.
 """Optional ROS transport for the standalone confirmed gesture client.
 
 Imports remain local so the shared workbench core and Mock host need no ROS install.

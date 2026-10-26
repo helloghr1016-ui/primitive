@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: Apache-2.0
-# Extracted from linker_lerobot; see NOTICE for source and license attribution.
+# SPDX-License-Identifier: MIT
+# Independently developed LinkerHand workbench code; see LICENSE and NOTICE.
 """Thread-safe "latest message" holders shared by ROS 2 backends.
 
 Transport callbacks deliver messages on their thread; the host control loop reads them on

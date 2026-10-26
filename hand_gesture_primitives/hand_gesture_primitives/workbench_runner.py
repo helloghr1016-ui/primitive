@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: Apache-2.0
-# Extracted from linker_lerobot; see NOTICE for source and license attribution.
+# SPDX-License-Identifier: MIT
+# Independently developed LinkerHand workbench code; see LICENSE and NOTICE.
 """Host-independent tick-driven primitive execution with injected joint conversion.
 
 The host owns feedback freshness, scheduling and the single hardware writer.

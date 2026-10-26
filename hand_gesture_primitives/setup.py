@@ -104,8 +104,9 @@ setup(
     maintainer="LinkerHand Team",
     maintainer_email="opensource@linkerbot.ai",
     description="LinkerHand 手势原语（O20/L25/O30/O6/L6/G20；内部 semantic_30）",
+    # The implementation is MIT; bundled O6 model resources retain Apache-2.0.
     license="MIT AND Apache-2.0",
-    license_files=["LICENSE", "LICENSE.linker-workbench", "NOTICE"],
+    license_files=["LICENSE", "LICENSE.apache-2.0", "NOTICE"],
     extras_require={
         "test": ["pytest", "httpx", "ruff"],
         "teach": ["fastapi<1", "uvicorn[standard]", "websockets>=12"],

@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: Apache-2.0
-# Extracted from linker_lerobot; see NOTICE for source and license attribution.
+# SPDX-License-Identifier: MIT
+# Independently developed LinkerHand workbench code; see LICENSE and NOTICE.
 """Thin client for an externally running hand_gesture_primitives ``gesture_node``.
 
 Only command/progress topics are published; gesture_node owns the hand writer. Topics follow ``hand_gesture_primitives.topic_defaults``.

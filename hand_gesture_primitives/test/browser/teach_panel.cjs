@@ -20,6 +20,13 @@ async function main() {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   page.on('dialog', dialog => dialog.accept());
+  const acknowledgedSaves = new Set();
+  page.on('websocket', socket => socket.on('framereceived', frame => {
+    const message = JSON.parse(frame.payload.toString());
+    if (message.type === 'ok' && message.action === 'save_pose') {
+      acknowledgedSaves.add(`${new URL(socket.url()).host}/${message.name}`);
+    }
+  }));
   async function api(endpoint, data, method = 'POST', url = base) {
     const response = await page.request.fetch(`${url}/api/workbench/${endpoint}`, { method: data === undefined ? 'GET' : method, ...(data === undefined ? {} : { data }) });
     assert.equal(response.ok(), true, await response.text()); return response.json();
@@ -88,6 +95,8 @@ async function main() {
     await page.locator('#poseName').fill(name);
     await page.locator('#poseKeyframe').fill('prepare');
     await page.locator('#btnSave').click();
+    // A library read performs IO too; let the WebSocket save finish before polling it.
+    await until(() => acknowledgedSaves.has(`${new URL(base).host}/${name}`), 'legacy save acknowledged');
     await until(async () => (await api('library?side=right')).poses.some(pose => pose.name === name), 'legacy save remains available');
     await page.locator('#btnExit').click();
     await until(async () => (await page.locator('#stateBadge').textContent()) === 'PRIMITIVE_IDLE', 'legacy teach exited');
@@ -141,6 +150,7 @@ async function main() {
       await until(async () => (await page.locator('#stateBadge').textContent()) === 'TEACH_EDIT', 'readonly editor entered');
       await page.locator('#poseName').fill(name); await page.locator('#poseKeyframe').fill('prepare');
       await page.locator('#btnSave').click();
+      await until(() => acknowledgedSaves.has(`${new URL(readonlyBase).host}/${name}`), 'readonly save acknowledged');
       await until(async () => (await api('library?side=right', undefined, 'GET', readonlyBase)).poses.some(pose => pose.name === name), 'readonly draft saved');
       assert.equal(await page.locator('#btnPlay').isDisabled(), true);
       assert.deepEqual((await api('capture?side=right', undefined, 'GET', readonlyBase)).positions, [0, 0, 0, 0, 0, 0]);
